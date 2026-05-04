@@ -1,16 +1,16 @@
-# Doom 3 IceBridge Direct3D 12 with Path Tracing
-
-![Doom 3 IceBridge Direct3D 12 Path Tracing](https://i.imgur.com/DRjYU5J.jpeg)
+# idTech 4
 
 ## Overview
 
-This is **Doom 3 running through IceBridge**, a Direct3D 12 renderer layer designed to bring modern GPU rendering features to classic idTech 4 technology while keeping the original game’s dark, industrial atmosphere intact.
+This is idTech 4 a fork of **Doom 3 IceBridge**, a Direct3D 12 renderer layer designed to bring modern GPU rendering features to classic idTech 4 technology while keeping the original game’s dark, industrial atmosphere intact.
 
 This demo shows Doom 3 rendered with **Direct3D 12**, **path tracing**, **final gather**, and **global illumination**, adding richer lighting, more natural shadowing, improved reflections, and a deeper sense of atmosphere without rebuilding the game’s original art direction from scratch.
 
 The goal is not to erase Doom 3’s classic look.
 
 The goal is to enhance it with modern rendering techniques while preserving the mood, darkness, contrast, and oppressive atmosphere that made the original game so iconic.
+
+No game assets are included in this fork.
 
 ## What Is IceBridge?
 
