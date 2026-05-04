@@ -1,4 +1,5 @@
 #include "opengl.h"
+#include "icebridge_rhi.h"
 
 // Your D3D12 wrapper exports
 extern bool QD3D12_InitForQuakeWindow(struct QD3D12Window* window, HWND hwnd, int width, int height, bool fastPath);
@@ -29,6 +30,7 @@ struct QD3D12FakeContext
 
 static QD3D12FakeContext* g_currentContext = nullptr;
 static HDC                g_currentDC = nullptr;
+static bool               g_icebridgeBasicInitDone = false;
 
 struct QD3D12Window* AllocD3D12Window();
 void FreeD3D12Window(struct QD3D12Window* wnd);
@@ -63,8 +65,6 @@ QD3D12_HGLRC WINAPI qd3d12_wglCreateContext(HDC hdc)
 
 BOOL WINAPI qd3d12_wglMakeCurrent(HDC hdc, QD3D12_HGLRC hglrc)
 {
-    static bool basicInitDone = false;
-
     if (!hdc || !hglrc)
     {
         g_currentDC = nullptr;
@@ -80,14 +80,22 @@ BOOL WINAPI qd3d12_wglMakeCurrent(HDC hdc, QD3D12_HGLRC hglrc)
     int w = 640, h = 480;
     QD3D12_GetClientSize(ctx->hwnd, w, h);
 
-    if (!ctx->initialized)
+	if (!ctx->initialized)
     {
-		if (!QD3D12_InitForQuakeWindow(ctx->window, ctx->hwnd, w, h, basicInitDone))
+		IceBridge_RefreshRHIFromCvar();
+		if ( QIceBridge_GetRequestedRHI() == QICEBRIDGE_RHI_Vulkan ) {
+			IceBridge_Log( "IceBridge: Vulkan backend requested but not implemented yet; using D3D12 (DXR path).\n" );
+			QIceBridge_SetActiveRHI( QICEBRIDGE_RHI_D3D12 );
+		} else {
+			QIceBridge_SetActiveRHI( QICEBRIDGE_RHI_D3D12 );
+		}
+
+		if (!QD3D12_InitForQuakeWindow(ctx->window, ctx->hwnd, w, h, g_icebridgeBasicInitDone))
 			return FALSE;
     }
     
 
-	if (!basicInitDone)
+	if (!g_icebridgeBasicInitDone)
 	{
         if(!glRaytracingInit())
             return FALSE;
@@ -95,7 +103,7 @@ BOOL WINAPI qd3d12_wglMakeCurrent(HDC hdc, QD3D12_HGLRC hglrc)
         if (!glRaytracingLightingInit())
             return FALSE;
 
-        basicInitDone = true;
+        g_icebridgeBasicInitDone = true;
        
         QD3D12_BeginFrame();
     }
@@ -139,8 +147,11 @@ BOOL WINAPI qd3d12_wglDeleteContext(QD3D12_HGLRC hglrc)
 
     if (ctx == g_currentContext)
     {
-        if (ctx->initialized)
+        if (ctx->initialized) {
             QD3D12_ShutdownForQuake();
+			glRaytracingShutdown();
+			g_icebridgeBasicInitDone = false;
+		}
 
         g_currentContext = nullptr;
         g_currentDC = nullptr;

@@ -30,6 +30,7 @@ If you have questions concerning this license or the applicable additional terms
 #pragma hdrstop
 
 #include "tr_local.h"
+#include "../opengl/icebridge_rhi.h"
 
 // Vista OpenGL wrapper check
 #ifdef _WIN32
@@ -431,6 +432,8 @@ void R_InitOpenGL( void ) {
 	int				i;
 
 	common->Printf( "----- R_InitOpenGL -----\n" );
+
+	IceBridge_RefreshRHIFromCvar();
 
 	if ( glConfig.isInitialized ) {
 		common->FatalError( "R_InitOpenGL called while active" );
@@ -1589,6 +1592,12 @@ void GfxInfo_f( const idCmdArgs &args ) {
 		"fullscreen"
 	};
 
+	{
+		const char *req = ( QIceBridge_GetRequestedRHI() == QICEBRIDGE_RHI_Vulkan ) ? "vulkan" : "d3d12";
+		const char *act = ( QIceBridge_GetActiveRHI() == QICEBRIDGE_RHI_Vulkan ) ? "vulkan" : "d3d12";
+		common->Printf( "\nIceBridge RHI: requested %s, active %s (cvar r_icebridgeRHI=%s)\n", req, act, r_icebridgeRHI.GetString() );
+	}
+
 	common->Printf( "\nGL_VENDOR: %s\n", glConfig.vendor_string );
 	common->Printf( "GL_RENDERER: %s\n", glConfig.renderer_string );
 	common->Printf( "GL_VERSION: %s\n", glConfig.version_string );
@@ -1843,6 +1852,8 @@ R_InitCommands
 =================
 */
 void R_InitCommands( void ) {
+	R_InitVulkanProbeCommand();
+
 	cmdSystem->AddCommand( "sizeUp", R_SizeUp_f, CMD_FL_RENDERER, "makes the rendered view larger" );
 	cmdSystem->AddCommand( "sizeDown", R_SizeDown_f, CMD_FL_RENDERER, "makes the rendered view smaller" );
 	cmdSystem->AddCommand( "reloadGuis", R_ReloadGuis_f, CMD_FL_RENDERER, "reloads guis" );

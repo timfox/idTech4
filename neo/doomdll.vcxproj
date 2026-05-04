@@ -1334,6 +1334,8 @@
     <ClCompile Include="renderer\RenderEntity.cpp" />
     <ClCompile Include="renderer\RenderSystem.cpp" />
     <ClCompile Include="renderer\RenderSystem_init.cpp" />
+    <ClCompile Include="renderer\RHI\icebridge_rhi_registry.cpp" />
+    <ClCompile Include="renderer\RHI\icebridge_vulkan_probe.cpp" />
     <ClCompile Include="renderer\RenderWorld.cpp" />
     <ClCompile Include="renderer\RenderWorld_demo.cpp" />
     <ClCompile Include="renderer\RenderWorld_load.cpp" />

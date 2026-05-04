@@ -66,6 +66,12 @@ Lighting, denoising, path tracing quality, performance, and compatibility are st
 - Global illumination
 - Modern GPU rendering pipeline
 
+### Vulkan (experimental)
+
+The compatibility layer is still **D3D12-first** (including the DXR path-traced lighting stack in `neo/opengl/gl_d3d12raylight.cpp`). A Vulkan backend is being introduced behind **`r_icebridgeRHI`**: use `d3d12` (default) for the full shipped path; `vulkan` is reserved and currently falls back to D3D12 with a console message until the Vulkan GL shim exists.
+
+Use the in-engine command **`vkInfo`** to verify that `vulkan-1.dll` loads and a minimal `VkInstance` can be created on your machine (diagnostic only).
+
 ## About IceBridge
 
 IceBridge is designed to bring modern rendering capabilities to legacy engines without requiring the entire game renderer to be rewritten from scratch.
