@@ -83,8 +83,17 @@ BOOL WINAPI qd3d12_wglMakeCurrent(HDC hdc, QD3D12_HGLRC hglrc)
 	if (!ctx->initialized)
     {
 		IceBridge_RefreshRHIFromCvar();
+		IceBridge_RefreshD3D12RasterFromCvar();
 		if ( QIceBridge_GetRequestedRHI() == QICEBRIDGE_RHI_Vulkan ) {
-			IceBridge_Log( "IceBridge: Vulkan backend requested but not implemented yet; using D3D12 (DXR path).\n" );
+			// Try minimal Vulkan bootstrap for diagnostics; we still render through D3D12 until the Vulkan GL shim exists.
+			extern bool IceBridgeVulkan_Init(void);
+			extern void IceBridgeVulkan_LogCaps(void);
+			if ( IceBridgeVulkan_Init() ) {
+				IceBridge_Log( "IceBridge: Vulkan requested; Vulkan bootstrap initialized for diagnostics. Rendering will remain on D3D12 until the Vulkan GL shim is implemented.\n" );
+				IceBridgeVulkan_LogCaps();
+			} else {
+				IceBridge_Log( "IceBridge: Vulkan requested but bootstrap failed; falling back to D3D12.\n" );
+			}
 			QIceBridge_SetActiveRHI( QICEBRIDGE_RHI_D3D12 );
 		} else {
 			QIceBridge_SetActiveRHI( QICEBRIDGE_RHI_D3D12 );
