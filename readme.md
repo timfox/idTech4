@@ -31,6 +31,8 @@ The D3D12-backed GL path is wired through the **`opengl`** project and helpers s
 
 **Steam Deck** does not offer practical **hardware ray tracing** for this engine’s DXR-style path. Portable work should prioritize **Vulkan raster** (swapchain, passes, post), **asset and pak loading**, and **media** (see [docs/VULKAN_PLATFORM_STEAMDECK.md](docs/VULKAN_PLATFORM_STEAMDECK.md)).
 
+**Linux build + Vulkan CVar:** [docs/LINUX_BUILD_VULKAN.md](docs/LINUX_BUILD_VULKAN.md) (packages, SCons notes, `r_icebridgeRHI vulkan`, troubleshooting).
+
 Quick **Vulkan driver / extension check** (Linux, `libvulkan.so.1`):
 
 ```bash
@@ -97,9 +99,9 @@ Lighting, denoising, path tracing quality, performance, and compatibility are st
 
 ### Vulkan (experimental)
 
-The compatibility layer is still **D3D12-first** (including the DXR path-traced lighting stack in `neo/opengl/gl_d3d12raylight.cpp`). A Vulkan backend is being introduced behind **`r_icebridgeRHI`**: use `d3d12` (default) for the full shipped path; `vulkan` is reserved and currently falls back to D3D12 with a console message until the Vulkan GL shim exists.
+The compatibility layer is still **D3D12-first** on Windows (including the DXR path-traced lighting stack in `neo/opengl/gl_d3d12raylight.cpp`). On **Linux**, **`r_icebridgeRHI vulkan`** enables an experimental **Vulkan swapchain** alongside the existing **GLX** path: each frame the engine still renders with OpenGL, then acquires a swapchain image, runs a minimal render pass (**clear only**), and **presents**—so you can verify `libvulkan.so.1`, surface, and presentation on Ubuntu / Steam Deck while the full Vulkan GL shim is built out. Use **`d3d12`** only on Windows builds that use IceBridge; on Linux it remains the documented default string but maps to the GLX renderer.
 
-Use the in-engine command **`vkInfo`** to verify that `vulkan-1.dll` loads and a minimal `VkInstance` can be created on your machine (diagnostic only).
+Use the in-engine command **`vkInfo`** (Windows) to verify that `vulkan-1.dll` loads and a minimal `VkInstance` can be created on your machine (diagnostic only).
 
 A future **Vulkan ray tracing** path would port the **`glRaytracing*`** stack—see [docs/VULKAN_RAYTRACING.md](docs/VULKAN_RAYTRACING.md). On **Linux**, you can check whether the driver advertises RT-related extensions with:
 

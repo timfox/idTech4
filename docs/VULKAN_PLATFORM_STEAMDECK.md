@@ -8,13 +8,13 @@ This document aligns goals with **what already exists in classic id Tech 4** in 
 
 ## 1. Renderer: Vulkan without RT
 
-**Today (this fork):** real-time GI / lighting experiments are tied to **D3D12 + DXR** in the IceBridge layer (`neo/opengl/gl_d3d12*.cpp`). There is **no Vulkan swapchain or draw path** in-tree on `main` yet.
+**Today (this fork):** real-time GI / lighting experiments are tied to **D3D12 + DXR** in the IceBridge layer (`neo/opengl/gl_d3d12*.cpp`) on **Windows**. On **Linux**, an **experimental Vulkan swapchain + present** path exists when **`r_icebridgeRHI vulkan`** is set: it runs **alongside GLX** (OpenGL still renders the game; Vulkan clears and presents each frame for driver validation). See [LINUX_BUILD_VULKAN.md](LINUX_BUILD_VULKAN.md).
 
 **Deck-appropriate direction:**
 
 | Milestone | Outcome |
 |-----------|---------|
-| A | **Vulkan instance + `VkSurfaceKHR` + swapchain** (Gamescope/Wayland on Deck, X11/Wayland on desktop Linux) |
+| A | **Vulkan instance + `VkSurfaceKHR` + swapchain** — **partial on Linux/X11** (`icebridge_vulkan_linux.cpp` + `r_icebridgeRHI vulkan`); Wayland-native surface and Deck-specific tuning still open |
 | B | **Depth/stencil + render pass** feeding the existing material backend *or* a staged rewrite |
 | C | **MSAA / TAA** as post passes (Deck-friendly defaults: lower internal res + TAA) |
 | D | **Async compute / graphics** overlap for upload and draw (where the driver wins) |
