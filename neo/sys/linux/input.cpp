@@ -27,9 +27,17 @@ If you have questions concerning this license or the applicable additional terms
 */
 #include "../../idlib/precompiled.h"
 #include "../posix/posix_public.h"
+#include "../framework/CVarSystem.h"
 #include "local.h"
 
 #include <pthread.h>
+
+#if !defined( ID_DEDICATED )
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
+#include <linux/joystick.h>
+#endif
 
 idCVar in_mouse( "in_mouse", "1", CVAR_SYSTEM | CVAR_ARCHIVE, "" );
 idCVar in_dgamouse( "in_dgamouse", "1", CVAR_SYSTEM | CVAR_ARCHIVE, "" );
@@ -82,6 +90,44 @@ void IN_Clear_f( const idCmdArgs &args ) {
 	idKeyInput::ClearStates();
 }
 
+#if !defined( ID_DEDICATED )
+/*
+================
+IN_JoyInfo_f
+================
+*/
+static void IN_JoyInfo_f( const idCmdArgs &args ) {
+	(void)args;
+
+	const char *path = cvarSystem->GetCVarString( "in_joydev" );
+	if ( !path || !path[0] ) {
+		common->Printf( "in_joydev is empty; set it (e.g. /dev/input/js0) first.\n" );
+		return;
+	}
+
+	int fd = open( path, O_RDONLY );
+	if ( fd < 0 ) {
+		common->Printf( "Could not open %s: %s\n", path, strerror( errno ) );
+		return;
+	}
+
+	char name[128] = {};
+	if ( ioctl( fd, JSIOCGNAME( sizeof( name ) - 1 ), name ) >= 0 ) {
+		common->Printf( "Joydev %s: \"%s\"\n", path, name );
+	} else {
+		common->Printf( "Joydev %s: (name ioctl failed)\n", path );
+	}
+
+	uint8_t nax = 0, nbtn = 0;
+	if ( ioctl( fd, JSIOCGAXES, &nax ) == 0 && ioctl( fd, JSIOCGBUTTONS, &nbtn ) == 0 ) {
+		common->Printf( "  axes: %u  buttons: %u\n", (unsigned)nax, (unsigned)nbtn );
+	}
+
+	close( fd );
+	common->Printf( "Tune with in_joy_axis*, in_joy_buttonBase, in_joy_deadzone; bind JOY* in steamdeck.cfg\n" );
+}
+#endif
+
 /*
 =================
 Sys_InitInput
@@ -94,6 +140,9 @@ void Sys_InitInput(void) {
 	common->Printf( "\n------- Input Initialization -------\n" );
 	assert( dpy );
 	cmdSystem->AddCommand( "in_clear", IN_Clear_f, CMD_FL_SYSTEM, "reset the input keys" );
+#if !defined( ID_DEDICATED )
+	cmdSystem->AddCommand( "in_joy_info", IN_JoyInfo_f, CMD_FL_SYSTEM, "print joydev name, axis count, and button count (Linux)" );
+#endif
 	major_in_out = XkbMajorVersion;
 	minor_in_out = XkbMinorVersion;
 	ret = XkbLibraryVersion( &major_in_out, &minor_in_out );
@@ -507,7 +556,9 @@ void Posix_PollInput() {
 Sys_ShutdownInput
 =================
 */
-void Sys_ShutdownInput( void ) { }
+void Sys_ShutdownInput( void ) {
+	Sys_ShutdownJoystickFill();
+}
 
 /*
 ===============

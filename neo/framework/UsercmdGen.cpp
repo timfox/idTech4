@@ -414,6 +414,8 @@ idCVar idUsercmdGenLocal::m_strafeScale( "m_strafeScale", "6.25", CVAR_SYSTEM | 
 idCVar idUsercmdGenLocal::m_smooth( "m_smooth", "1", CVAR_SYSTEM | CVAR_ARCHIVE | CVAR_INTEGER, "number of samples blended for mouse viewing", 1, 8, idCmdSystem::ArgCompletion_Integer<1,8> );
 idCVar idUsercmdGenLocal::m_strafeSmooth( "m_strafeSmooth", "4", CVAR_SYSTEM | CVAR_ARCHIVE | CVAR_INTEGER, "number of samples blended for mouse moving", 1, 8, idCmdSystem::ArgCompletion_Integer<1,8> );
 idCVar idUsercmdGenLocal::m_showMouseRate( "m_showMouseRate", "0", CVAR_SYSTEM | CVAR_BOOL, "shows mouse movement" );
+idCVar in_joyLookScale( "in_joyLookScale", "0.35", CVAR_SYSTEM | CVAR_ARCHIVE | CVAR_FLOAT,
+	"Scale for right-stick look (AXIS_YAW/AXIS_PITCH from Sys_FillJoystickAxes). 0 = use JoystickMove defaults only." );
 
 static idUsercmdGenLocal localUsercmdGen;
 idUsercmdGen	*usercmdGen = &localUsercmdGen;
@@ -675,6 +677,7 @@ idUsercmdGenLocal::JoystickMove
 */
 void idUsercmdGenLocal::JoystickMove( void ) {
 	float	anglespeed;
+	const float lookScale = in_joyLookScale.GetFloat();
 
 	if ( toggled_run.on ^ ( in_alwaysRun.GetBool() && idAsyncNetwork::IsActive() ) ) {
 		anglespeed = idMath::M_MS2SEC * USERCMD_MSEC * in_angleSpeedKey.GetFloat();
@@ -685,6 +688,10 @@ void idUsercmdGenLocal::JoystickMove( void ) {
 	if ( !ButtonState( UB_STRAFE ) ) {
 		viewangles[YAW] += anglespeed * in_yawSpeed.GetFloat() * joystickAxis[AXIS_SIDE];
 		viewangles[PITCH] += anglespeed * in_pitchSpeed.GetFloat() * joystickAxis[AXIS_FORWARD];
+		if ( lookScale > 0.0f ) {
+			viewangles[YAW] += anglespeed * in_yawSpeed.GetFloat() * (float)joystickAxis[AXIS_YAW] * lookScale;
+			viewangles[PITCH] += anglespeed * in_pitchSpeed.GetFloat() * (float)joystickAxis[AXIS_PITCH] * lookScale;
+		}
 	} else {
 		cmd.rightmove = idMath::ClampChar( cmd.rightmove + joystickAxis[AXIS_SIDE] );
 		cmd.forwardmove = idMath::ClampChar( cmd.forwardmove + joystickAxis[AXIS_FORWARD] );
@@ -1036,6 +1043,7 @@ idUsercmdGenLocal::Joystick
 */
 void idUsercmdGenLocal::Joystick( void ) {
 	memset( joystickAxis, 0, sizeof( joystickAxis ) );
+	Sys_FillJoystickAxes( joystickAxis, MAX_JOYSTICK_AXIS );
 }
 
 /*

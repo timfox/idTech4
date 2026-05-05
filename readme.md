@@ -27,6 +27,18 @@ To run the game you still need **legal Doom 3 game data** (for example `base/pak
 
 The D3D12-backed GL path is wired through the **`opengl`** project and helpers such as [`neo/opengl/gl_d3d12wgl.cpp`](neo/opengl/gl_d3d12wgl.cpp); renderer initialization touches code like [`neo/renderer/RenderSystem_init.cpp`](neo/renderer/RenderSystem_init.cpp).
 
+## Linux / Steam Deck and Vulkan (raster)
+
+**Steam Deck** does not offer practical **hardware ray tracing** for this engine’s DXR-style path. Portable work should prioritize **Vulkan raster** (swapchain, passes, post), **asset and pak loading**, and **media** (see [docs/VULKAN_PLATFORM_STEAMDECK.md](docs/VULKAN_PLATFORM_STEAMDECK.md)).
+
+Quick **Vulkan driver / extension check** (Linux, `libvulkan.so.1`):
+
+```bash
+make -C tools/vulkan_caps && ./tools/vulkan_caps/vulkan_caps
+```
+
+**Gamepad / Deck sticks (Linux joydev):** see [docs/STEAMDECK_CONTROLS.md](docs/STEAMDECK_CONTROLS.md) (`in_joydev`, axis mapping, `in_joyLookScale`). Starter binds: [base/steamdeck.cfg](base/steamdeck.cfg) (`exec steamdeck.cfg` or `in_joy_autoexec_profile 1`).
+
 ## What Is IceBridge?
 
 **IceBridge** is a compatibility and modernization renderer layer for older engines.
