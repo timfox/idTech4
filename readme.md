@@ -87,6 +87,12 @@ The compatibility layer is still **D3D12-first** (including the DXR path-traced 
 
 Use the in-engine command **`vkInfo`** to verify that `vulkan-1.dll` loads and a minimal `VkInstance` can be created on your machine (diagnostic only).
 
+A future **Vulkan ray tracing** path would port the **`glRaytracing*`** stack—see [docs/VULKAN_RAYTRACING.md](docs/VULKAN_RAYTRACING.md). On **Linux**, you can check whether the driver advertises RT-related extensions with:
+
+```bash
+make -C tools/vulkanrt_caps && ./tools/vulkanrt_caps/vulkanrt_caps
+```
+
 ## About IceBridge
 
 IceBridge is designed to bring modern rendering capabilities to legacy engines without requiring the entire game renderer to be rewritten from scratch.
