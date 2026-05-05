@@ -1853,6 +1853,7 @@ R_InitCommands
 */
 void R_InitCommands( void ) {
 	R_InitVulkanProbeCommand();
+	cmdSystem->AddCommand( "bulletProbe", R_BulletProbe_f, CMD_FL_RENDERER, "run a tiny Bullet simulation (Windows + Bullet libs)" );
 
 	cmdSystem->AddCommand( "sizeUp", R_SizeUp_f, CMD_FL_RENDERER, "makes the rendered view larger" );
 	cmdSystem->AddCommand( "sizeDown", R_SizeDown_f, CMD_FL_RENDERER, "makes the rendered view smaller" );

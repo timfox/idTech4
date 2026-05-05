@@ -1047,6 +1047,7 @@ const int GLS_DEFAULT							= GLS_DEPTHFUNC_ALWAYS;
 void R_Init( void );
 void R_InitOpenGL( void );
 void R_InitVulkanProbeCommand( void );
+void R_BulletProbe_f( const idCmdArgs &args );
 
 void R_DoneFreeType( void );
 

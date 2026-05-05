@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- Optional Bullet: enabled only when prebuilt .lib files exist (see third_party/build-bullet-msvc.ps1). -->
+  <PropertyGroup>
+    <Bullet3Root>$(MSBuildThisFileDirectory)..\third_party\bullet3</Bullet3Root>
+    <BulletLibRelease>$(MSBuildThisFileDirectory)..\third_party\bullet\lib\Release</BulletLibRelease>
+    <BulletLibDebug>$(MSBuildThisFileDirectory)..\third_party\bullet\lib\Debug</BulletLibDebug>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="('$(Configuration)'=='Release' or '$(Configuration)'=='Dedicated Release') and Exists('$(BulletLibRelease)\LinearMath.lib')">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(Bullet3Root)\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>ID_HAVE_BULLET=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(BulletLibRelease);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>LinearMath.lib;BulletCollision.lib;BulletDynamics.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="('$(Configuration)'!='Release' and '$(Configuration)'!='Dedicated Release') and Exists('$(BulletLibDebug)\LinearMath.lib')">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(Bullet3Root)\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>ID_HAVE_BULLET=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(BulletLibDebug);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>LinearMath.lib;BulletCollision.lib;BulletDynamics.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+</Project>

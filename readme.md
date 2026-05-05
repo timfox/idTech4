@@ -135,3 +135,11 @@ git clone --recurse-submodules https://github.com/timfox/idTech4.git
 ```
 
 A **Core Dialog** reference tool (XML + JSON loaders, `*` / `_`, templates including `<srai>`, predicates, etc.) lives under **`tools/aiml3/`** — see [tools/aiml3/README.md](tools/aiml3/README.md).
+
+## Bullet Physics (optional, Windows)
+
+The **[bullet3](https://github.com/bulletphysics/bullet3)** sources are a submodule at **`third_party/bullet3`**. **DoomDLL** can link **static** Bullet libs (`LinearMath`, `BulletCollision`, `BulletDynamics`) built with **`/MT`** / **`/MTd`** to match this solution.
+
+1. `git submodule update --init --recursive`
+2. Run **`third_party/build-bullet-msvc.ps1`** (Release and optionally Debug) — see [third_party/bullet/README.md](third_party/bullet/README.md).
+3. Rebuild **DoomDLL**; the **`bulletProbe`** console command runs a tiny simulation when Bullet is linked (`ID_HAVE_BULLET`).

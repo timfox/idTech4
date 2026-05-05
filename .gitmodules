@@ -1,3 +1,6 @@
 [submodule "third_party/aiml-3.0-spec"]
 	path = third_party/aiml-3.0-spec
 	url = https://github.com/timfox/aiml-3.0-spec.git
+[submodule "third_party/bullet3"]
+	path = third_party/bullet3
+	url = https://github.com/bulletphysics/bullet3.git
