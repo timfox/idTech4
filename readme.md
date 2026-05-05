@@ -27,6 +27,17 @@ To run the game you still need **legal Doom 3 game data** (for example `base/pak
 
 The D3D12-backed GL path is wired through the **`opengl`** project and helpers such as [`neo/opengl/gl_d3d12wgl.cpp`](neo/opengl/gl_d3d12wgl.cpp); renderer initialization touches code like [`neo/renderer/RenderSystem_init.cpp`](neo/renderer/RenderSystem_init.cpp).
 
+### In-engine studio tools (asset iteration)
+
+With **cheats enabled** (`devmap` / `g_cheats 1`), the game DLL registers console commands for lightweight in-engine iteration (inspired by id Studio–style workflows): run **`studioHelp`** for the full list. Highlights:
+
+- **`studioPick`** — trace from the camera and print the hit entity, `model` / `skin` spawn keys, and surface **material** name.
+- **`studioSpawnArgSet`** / **`studioShaderParm`** — tweak spawn args or `shaderParms[]` on an entity and refresh visuals without leaving the map.
+- **`studioReloadDecl`** / **`studioReloadDeclFile`** / **`studioReloadMaterialImages`** — refresh decls and material images after editing source files.
+- **`studioBrowseAssets`** — list files under a VFS folder (for example `materials` with extension `.mtr`).
+- **`studioWriteDevFile`** — append a line of text to a path under **`fs_devpath`** (set this to your mod tree so edits land next to your assets).
+- **`studioReloadMedia`** — queues **`reloadImages all`**, **`reloadModels all`**, **`reloadSounds`**, and runs **`declManager->reload`** for a coarse “refresh everything” pass.
+
 ## Linux / Steam Deck and Vulkan (raster)
 
 **Steam Deck** does not offer practical **hardware ray tracing** for this engine’s DXR-style path. Portable work should prioritize **Vulkan raster** (swapchain, passes, post), **asset and pak loading**, and **media** (see [docs/VULKAN_PLATFORM_STEAMDECK.md](docs/VULKAN_PLATFORM_STEAMDECK.md)).
