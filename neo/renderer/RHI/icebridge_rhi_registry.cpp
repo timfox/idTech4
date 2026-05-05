@@ -10,6 +10,8 @@ Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 #include "precompiled.h"
 #pragma hdrstop
 
+#include <cstdio>
+
 #include "tr_local.h"
 #include "../../opengl/icebridge_rhi.h"
 
@@ -58,7 +60,14 @@ extern "C" void IceBridge_Log( const char *msg ) {
 	if ( common && msg ) {
 		common->Printf( "%s", msg );
 	} else {
+#if defined( _WIN32 )
 		OutputDebugStringA( msg );
 		OutputDebugStringA( "\n" );
+#else
+		if ( msg ) {
+			fputs( msg, stderr );
+			fputc( '\n', stderr );
+		}
+#endif
 	}
 }

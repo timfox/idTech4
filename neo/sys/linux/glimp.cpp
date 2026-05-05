@@ -27,6 +27,8 @@ If you have questions concerning this license or the applicable additional terms
 */
 #include "../../idlib/precompiled.h"
 #include "../../renderer/tr_local.h"
+#include "../../renderer/RHI/icebridge_vulkan_linux.h"
+#include "../../opengl/icebridge_rhi.h"
 #include "local.h"
 
 #include <sys/types.h>
@@ -181,6 +183,12 @@ void GLimp_SetGamma(unsigned short red[256], unsigned short green[256], unsigned
 
 void GLimp_Shutdown() {
 	if ( dpy ) {
+
+#if defined( __linux__ )
+		if ( IceBridgeVulkanLinux_IsActive() ) {
+			IceBridgeVulkanLinux_Shutdown();
+		}
+#endif
 		
 		Sys_XUninstallGrabs();
 	
@@ -211,6 +219,11 @@ void GLimp_Shutdown() {
 
 void GLimp_SwapBuffers() {
 	assert( dpy );
+#if defined( __linux__ )
+	if ( IceBridgeVulkanLinux_IsActive() ) {
+		(void)IceBridgeVulkanLinux_Present();
+	}
+#endif
 	qglXSwapBuffers( dpy, win );
 }
 
@@ -525,6 +538,17 @@ int GLX_Init(glimpParms_t a) {
 	XFree(visinfo);
 
 	qglXMakeCurrent(dpy, win, ctx);
+
+#if defined( __linux__ )
+	IceBridge_RefreshRHIFromCvar();
+	if ( QIceBridge_GetRequestedRHI() == QICEBRIDGE_RHI_Vulkan ) {
+		if ( !IceBridgeVulkanLinux_Init( dpy, win, actualWidth, actualHeight ) ) {
+			common->Warning( "r_icebridgeRHI=vulkan: Vulkan presentation init failed; continuing with GLX only.\n" );
+		}
+	} else if ( IceBridgeVulkanLinux_IsActive() ) {
+		IceBridgeVulkanLinux_Shutdown();
+	}
+#endif
 
 	glstring = (const char *) qglGetString(GL_RENDERER);
 	common->Printf("GL_RENDERER: %s\n", glstring);
