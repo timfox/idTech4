@@ -86,3 +86,7 @@ IceBridge is designed to bring modern rendering capabilities to legacy engines w
 It is part compatibility layer, part modernization layer, and part preservation tool.
 
 The long-term goal is to allow older games and engines to take advantage of modern GPU APIs and rendering techniques while retaining their original identity.
+
+## Related: RBDOOM-3-BFG
+
+Merging [RBDOOM-3-BFG](https://github.com/RobertBeckebans/RBDOOM-3-BFG) is not a single patch: it targets **Doom 3 BFG** with **NVRHI** (Vulkan + D3D12), while this fork is **classic Doom 3** with **IceBridge (GL on D3D12) + DXR**. See [docs/RBDOOM-3-BFG-PORTING.md](docs/RBDOOM-3-BFG-PORTING.md) for a feature map, merge reality, and phased port strategies (CMake/SDL vs NVRHI vs cherry-picks).
