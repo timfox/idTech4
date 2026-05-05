@@ -1,0 +1,3 @@
+stb_image.h is from the stb repository (Sean Barrett), public domain / MIT.
+See the license block at the end of neo/renderer/third_party/stb_image.h
+or https://github.com/nothings/stb/blob/master/LICENSE

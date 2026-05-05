@@ -32,6 +32,11 @@ If you have questions concerning this license or the applicable additional terms
 #include "tr_local.h"
 #include "R_SvgLoad.h"
 
+extern "C" {
+unsigned char *stbi_load_from_memory( const unsigned char *buffer, int len, int *x, int *y, int *channels_in_file, int desired_channels );
+void stbi_image_free( void *retval_from_stbi_load );
+}
+
 /*
 
 This file only has a single entry point:
@@ -173,6 +178,7 @@ void R_WritePalTGA( const char *filename, const byte *data, const byte *palette,
 static void LoadBMP( const char *name, byte **pic, int *width, int *height, ID_TIME_T *timestamp );
 static void LoadTGA( const char *name, byte **pic, int *width, int *height, ID_TIME_T *timestamp );
 static void LoadJPG( const char *name, byte **pic, int *width, int *height, ID_TIME_T *timestamp );
+static void LoadSTB( const char *name, byte **pic, int *width, int *height, ID_TIME_T *timestamp );
 
 
 /*
@@ -979,6 +985,55 @@ static void LoadJPG( const char *filename, unsigned char **pic, int *width, int 
   /* And we're done! */
 }
 
+/*
+================
+LoadSTB
+
+Decodes formats handled by stb_image (PNG, GIF, HDR, PSD, PNM, …) from the
+virtual file system into canonical 8-bit RGBA for the renderer.
+================
+*/
+static void LoadSTB( const char *name, byte **pic, int *width, int *height, ID_TIME_T *timestamp ) {
+	byte	*buffer = NULL;
+	const int len = fileSystem->ReadFile( name, (void **)&buffer, timestamp );
+
+	if ( len <= 0 || !buffer ) {
+		if ( pic ) {
+			*pic = NULL;
+		}
+		return;
+	}
+
+	if ( !pic ) {
+		fileSystem->FreeFile( buffer );
+		return;
+	}
+
+	*pic = NULL;
+	int x = 0, y = 0, comp = 0;
+	unsigned char *rgba = stbi_load_from_memory( buffer, len, &x, &y, &comp, 4 );
+	fileSystem->FreeFile( buffer );
+
+	if ( !rgba || x < 1 || y < 1 ) {
+		if ( rgba ) {
+			stbi_image_free( rgba );
+		}
+		return;
+	}
+
+	byte *out = (byte *)R_StaticAlloc( x * y * 4 );
+	memcpy( out, rgba, (size_t)x * (size_t)y * 4 );
+	stbi_image_free( rgba );
+
+	*pic = out;
+	if ( width ) {
+		*width = x;
+	}
+	if ( height ) {
+		*height = y;
+	}
+}
+
 //===================================================================
 
 /*
@@ -1034,9 +1089,28 @@ void R_LoadImage( const char *cname, byte **pic, int *width, int *height, ID_TIM
 	if ( ext == "tga" ) {
 		LoadTGA( name.c_str(), pic, width, height, timestamp );            // try tga first
 		if ( ( pic && *pic == 0 ) || ( timestamp && *timestamp == -1 ) ) {
-			name.StripFileExtension();
-			name.DefaultFileExtension( ".jpg" );
-			LoadJPG( name.c_str(), pic, width, height, timestamp );
+			idStr base( name );
+			base.StripFileExtension();
+
+			idStr jpgName( base );
+			jpgName.DefaultFileExtension( ".jpg" );
+			LoadJPG( jpgName.c_str(), pic, width, height, timestamp );
+		}
+		if ( ( pic && *pic == 0 ) || ( timestamp && *timestamp == -1 ) ) {
+			idStr base( name );
+			base.StripFileExtension();
+			static const char *stbExts[] = { "png", "psd", "gif", "hdr", "pic", "ppm", "pgm", "pnm", NULL };
+			for ( int i = 0; stbExts[i] != NULL; i++ ) {
+				idStr n( base );
+				n.SetFileExtension( stbExts[i] );
+				LoadSTB( n.c_str(), pic, width, height, timestamp );
+				if ( pic && *pic ) {
+					break;
+				}
+				if ( !pic && timestamp && *timestamp != (ID_TIME_T)-1 ) {
+					break;
+				}
+			}
 		}
 	} else if ( ext == "pcx" ) {
 		LoadPCX32( name.c_str(), pic, width, height, timestamp );
@@ -1046,6 +1120,8 @@ void R_LoadImage( const char *cname, byte **pic, int *width, int *height, ID_TIM
 		LoadJPG( name.c_str(), pic, width, height, timestamp );
 	} else if ( ext == "svg" ) {
 		LoadSVG( name.c_str(), pic, width, height, timestamp );
+	} else if ( ext == "png" || ext == "psd" || ext == "gif" || ext == "hdr" || ext == "pic" || ext == "ppm" || ext == "pgm" || ext == "pnm" ) {
+		LoadSTB( name.c_str(), pic, width, height, timestamp );
 	}
 
 	if ( ( width && *width < 1 ) || ( height && *height < 1 ) ) {
