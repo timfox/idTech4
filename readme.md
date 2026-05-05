@@ -16,6 +16,8 @@ No game assets are included in this fork.
 
 This fork targets **64-bit Windows**. Open [`neo/Doom3.sln`](neo/Doom3.sln) in **Visual Studio** (the solution targets the **v145** MSVC platform toolset and **Windows 10.0** SDK as declared in the project files). Choose **Release \| x64** (or another non-dedicated configuration) and build the solution.
 
+The main C++ targets (**DoomDLL**, **Game**, **idLib**, **MayaImport**, **opengl**) compile as **`/std:c++latest`** via [`neo/_CppLanguage.props`](neo/_CppLanguage.props) (CurlLib stays on the compiler default because it builds C sources).
+
 Binaries are written next to the solution directory: **`Doom3.exe`** and **`gamex64.dll`** land in the repository root (one level above `neo/`), matching the `OutputFile` settings in the `.vcxproj` files.
 
 To run the game you still need **legal Doom 3 game data** (for example `base/pak000.pk4` and the rest of the stock packs). Typical options:
@@ -78,6 +80,12 @@ Lighting, denoising, path tracing quality, performance, and compatibility are st
 - Final gather
 - Global illumination
 - Modern GPU rendering pipeline
+
+### Vulkan (experimental)
+
+The compatibility layer is still **D3D12-first** (including the DXR path-traced lighting stack in `neo/opengl/gl_d3d12raylight.cpp`). A Vulkan backend is being introduced behind **`r_icebridgeRHI`**: use `d3d12` (default) for the full shipped path; `vulkan` is reserved and currently falls back to D3D12 with a console message until the Vulkan GL shim exists.
+
+Use the in-engine command **`vkInfo`** to verify that `vulkan-1.dll` loads and a minimal `VkInstance` can be created on your machine (diagnostic only).
 
 ## About IceBridge
 

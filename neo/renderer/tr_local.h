@@ -813,6 +813,7 @@ extern glconfig_t			glConfig;		// outside of TR since it shouldn't be cleared du
 extern idCVar r_ext_vertex_array_range;
 
 extern idCVar r_glDriver;				// "opengl32", etc
+extern idCVar r_icebridgeRHI;			// d3d12 | vulkan (IceBridge low-level API)
 extern idCVar r_mode;					// video mode number
 extern idCVar r_displayRefresh;			// optional display refresh rate option for vid mode
 extern idCVar r_fullscreen;				// 0 = windowed, 1 = full screen
@@ -1045,6 +1046,7 @@ const int GLS_DEFAULT							= GLS_DEPTHFUNC_ALWAYS;
 
 void R_Init( void );
 void R_InitOpenGL( void );
+void R_InitVulkanProbeCommand( void );
 
 void R_DoneFreeType( void );
 

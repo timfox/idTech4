@@ -23,4 +23,5 @@
       <LargeAddressAware>true</LargeAddressAware>
     </Link>
   </ItemDefinitionGroup>
+  <Import Project="_CppLanguage.props" />
 </Project>
