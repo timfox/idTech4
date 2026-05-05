@@ -1,0 +1,3 @@
+[submodule "third_party/aiml-3.0-spec"]
+	path = third_party/aiml-3.0-spec
+	url = https://github.com/timfox/aiml-3.0-spec.git

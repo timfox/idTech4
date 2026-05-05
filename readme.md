@@ -124,3 +124,14 @@ Useful **id Tech 5–era directions** for this codebase—**multi-core–friendl
 ## Map districts (`info_location`)
 
 HUD **area names** and optional **district** grouping for `info_location` / `location_separator` are documented in [docs/DISTRICT_SYSTEM.md](docs/DISTRICT_SYSTEM.md) (priority overlap, CVars, console commands).
+
+## AIML 3.0 (experimental Core interpreter)
+
+The [AIML 3.0 draft spec](https://github.com/timfox/aiml-3.0-spec) is vendored as a git submodule at **`third_party/aiml-3.0-spec`**. Clone with submodules:
+
+```bash
+git clone --recurse-submodules https://github.com/timfox/idTech4.git
+# or, after clone:  git submodule update --init --recursive
+```
+
+A **Core Dialog** reference tool (XML + JSON loaders, `*` / `_`, templates including `<srai>`, predicates, etc.) lives under **`tools/aiml3/`** — see [tools/aiml3/README.md](tools/aiml3/README.md).

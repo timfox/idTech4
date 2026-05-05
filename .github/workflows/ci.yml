@@ -28,6 +28,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Build and run (Unix)
         if: runner.os != 'Windows'
@@ -40,6 +42,8 @@ jobs:
           make -C tools/vulkanrt_caps clean all CXX="${{ matrix.cxx }}"
           ./tools/vulkan_caps/vulkan_caps
           ./tools/vulkanrt_caps/vulkanrt_caps
+          make -C tools/aiml3 clean all CXX="${{ matrix.cxx }}"
+          printf 'HELLO\nquit\n' | ./tools/aiml3/aiml3 --load tools/aiml3/test/hello.json
 
       - name: Build and run (Windows MSVC)
         if: runner.os == 'Windows'
@@ -69,4 +73,10 @@ jobs:
           cl /nologo /EHsc /O2 /W3 /Fe:vulkanrt_caps.exe main.cpp
           if errorlevel 1 exit /b 1
           vulkanrt_caps.exe
+          if errorlevel 1 exit /b 1
+          cd /d "%GITHUB_WORKSPACE%\tools\aiml3"
+          if exist aiml3.exe del aiml3.exe
+          cl /nologo /EHsc /O2 /W3 /Fe:aiml3.exe main.cpp normalize.cpp match.cpp template.cpp interpreter.cpp load_json.cpp load_xml.cpp
+          if errorlevel 1 exit /b 1
+          (echo HELLO& echo quit) | aiml3.exe --load test\hello.json
           if errorlevel 1 exit /b 1

@@ -1,0 +1,13 @@
+{
+  "version": "3.0.0",
+  "categories": [
+    {
+      "pattern": "HELLO",
+      "template": { "say": "Hello from AIML 3.0 Core." }
+    },
+    {
+      "pattern": "HELLO *",
+      "template": { "say": "Hello, <star/>." }
+    }
+  ]
+}
