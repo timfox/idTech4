@@ -31,6 +31,144 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "snd_local.h"
 
+#define DR_FLAC_NO_STDIO
+#define DR_MP3_NO_STDIO
+#include "third_party/dr_flac.h"
+#include "third_party/dr_mp3.h"
+
+namespace {
+
+static void ResampleInterleavedS16( const short *src, int srcFrames, int srcRate, int channels, int dstRate,
+	short **dstOut, int *dstFramesOut ) {
+	if ( srcFrames <= 0 || channels < 1 || channels > 2 ) {
+		*dstOut = NULL;
+		*dstFramesOut = 0;
+		return;
+	}
+	if ( srcRate == dstRate ) {
+		const int n = srcFrames * channels;
+		short *copy = (short *)Mem_Alloc( n * sizeof( short ) );
+		memcpy( copy, src, n * sizeof( short ) );
+		*dstOut = copy;
+		*dstFramesOut = srcFrames;
+		return;
+	}
+	const double ratio = (double)dstRate / (double)srcRate;
+	const int dstFrames = ( int )idMath::Ceil( ( float )( ( double )srcFrames * ratio ) );
+	const int dstSamples = dstFrames * channels;
+	short *dst = (short *)Mem_Alloc( dstSamples * sizeof( short ) );
+	for ( int f = 0; f < dstFrames; ++f ) {
+		const double srcPos = ( ( double )f ) / ratio;
+		const int i0 = ( int )idMath::Floor( ( float )srcPos );
+		const int i1 = Min( i0 + 1, srcFrames - 1 );
+		const float t = ( float )( srcPos - ( double )i0 );
+		for ( int c = 0; c < channels; ++c ) {
+			const float s0 = ( float )src[i0 * channels + c];
+			const float s1 = ( float )src[i1 * channels + c];
+			const float v = s0 * ( 1.0f - t ) + s1 * t;
+			dst[f * channels + c] = ( short )idMath::ClampInt( -32768, 32767, ( int )idMath::Floor( v + 0.5f ) );
+		}
+	}
+	*dstOut = dst;
+	*dstFramesOut = dstFrames;
+}
+
+static int PickTargetSampleRate( int srcRate ) {
+	if ( srcRate == 44100 || srcRate == 22050 || srcRate == 11025 ) {
+		return srcRate;
+	}
+	return 44100;
+}
+
+} // namespace
+
+/*
+=============
+idWaveFile::OpenFLACorMP3
+Decode entire FLAC or MP3 into memory as 16-bit PCM (engine-supported rates).
+=============
+*/
+int idWaveFile::OpenFLACorMP3( const char *strFileName, waveformatex_t *pwfx, bool flac ) {
+	byte *buf = nullptr;
+	const int len = fileSystem->ReadFile( strFileName, (void **)&buf, &mfileTime );
+	if ( len <= 0 || !buf ) {
+		return -1;
+	}
+
+	unsigned int ch = 0, rate = 0;
+	drflac_uint64 totalFLAC = 0;
+	drmp3_uint64 totalMP3 = 0;
+	short *pcm = nullptr;
+
+	if ( flac ) {
+		pcm = drflac_open_memory_and_read_pcm_frames_s16( buf, (size_t)len, &ch, &rate, &totalFLAC, NULL );
+	} else {
+		pcm = drmp3_open_memory_and_read_pcm_frames_s16( buf, (size_t)len, &ch, &rate, &totalMP3, NULL );
+	}
+	fileSystem->FreeFile( buf );
+	buf = nullptr;
+
+	if ( !pcm || ch < 1 || ch > 2 || rate == 0 ) {
+		if ( pcm ) {
+			if ( flac ) {
+				drflac_free( pcm, NULL );
+			} else {
+				drmp3_free( pcm, NULL );
+			}
+		}
+		return -1;
+	}
+
+	const drflac_uint64 totalFrames = flac ? totalFLAC : totalMP3;
+	if ( totalFrames == 0 ) {
+		if ( flac ) {
+			drflac_free( pcm, NULL );
+		} else {
+			drmp3_free( pcm, NULL );
+		}
+		return -1;
+	}
+
+	const int srcFrames = ( int )totalFrames;
+	const int targetRate = PickTargetSampleRate( ( int )rate );
+	short *resampled = nullptr;
+	int outFrames = 0;
+	ResampleInterleavedS16( pcm, srcFrames, ( int )rate, ( int )ch, targetRate, &resampled, &outFrames );
+	if ( flac ) {
+		drflac_free( pcm, NULL );
+	} else {
+		drmp3_free( pcm, NULL );
+	}
+	pcm = nullptr;
+
+	if ( !resampled || outFrames <= 0 ) {
+		return -1;
+	}
+
+	memset( &mpwfx, 0, sizeof( waveformatextensible_t ) );
+	mpwfx.Format.wFormatTag = WAVE_FORMAT_TAG_PCM;
+	mpwfx.Format.nChannels = ( word )ch;
+	mpwfx.Format.nSamplesPerSec = ( dword )targetRate;
+	mpwfx.Format.wBitsPerSample = 16;
+	mpwfx.Format.nBlockAlign = ( word )( ch * sizeof( short ) );
+	mpwfx.Format.nAvgBytesPerSec = targetRate * mpwfx.Format.nBlockAlign;
+
+	mdwSize = ( dword )( outFrames * ch );
+	mMemSize = mdwSize * sizeof( short );
+	mpbData = resampled;
+	mpbDataCur = mpbData;
+	mulDataSize = mMemSize;
+	mbIsReadingFromMemory = true;
+	mhmmio = NULL;
+	ogg = NULL;
+	isOgg = false;
+
+	if ( pwfx ) {
+		memcpy( pwfx, &mpwfx.Format, sizeof( waveformatex_t ) );
+	}
+	return 0;
+}
+
 //-----------------------------------------------------------------------------
 // Name: idWaveFile::idWaveFile()
 // Desc: Constructs the class.  Call Open() to open a wave file for reading.  
@@ -83,6 +221,19 @@ int idWaveFile::Open( const char* strFileName, waveformatex_t* pwfx ) {
 	name.SetFileExtension( ".ogg" );
 	if ( fileSystem->ReadFile( name, NULL, NULL ) != -1 ) {
 		return OpenOGG( name, pwfx );
+	}
+
+	idStr base = strFileName;
+	base.StripFileExtension();
+	idStr flacName = base;
+	flacName.SetFileExtension( ".flac" );
+	if ( fileSystem->ReadFile( flacName, NULL, NULL ) != -1 ) {
+		return OpenFLACorMP3( flacName.c_str(), pwfx, true );
+	}
+	idStr mp3Name = base;
+	mp3Name.SetFileExtension( ".mp3" );
+	if ( fileSystem->ReadFile( mp3Name, NULL, NULL ) != -1 ) {
+		return OpenFLACorMP3( mp3Name.c_str(), pwfx, false );
 	}
 
 	memset( &mpwfx, 0, sizeof( waveformatextensible_t ) );

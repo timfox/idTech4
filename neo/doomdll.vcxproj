@@ -1763,6 +1763,7 @@
     </ClCompile>
     <ClCompile Include="sound\snd_cache.cpp" />
     <ClCompile Include="sound\snd_decoder.cpp" />
+    <ClCompile Include="sound\snd_dr_libs.cpp" />
     <ClCompile Include="sound\snd_efxfile.cpp" />
     <ClCompile Include="sound\snd_emitter.cpp" />
     <ClCompile Include="sound\snd_shader.cpp" />

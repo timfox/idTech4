@@ -220,6 +220,8 @@ private:
     int				OpenOGG( const char* strFileName, waveformatex_t* pwfx = NULL );
 	int				ReadOGG( byte* pBuffer, int dwSizeToRead, int *pdwSizeRead );
 	int				CloseOGG( void );
+
+	int				OpenFLACorMP3( const char *strFileName, waveformatex_t *pwfx, bool flac );
 };
 
 

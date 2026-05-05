@@ -1,0 +1,4 @@
+dr_flac and dr_mp3 are from dr_libs by David Reid (mackron).
+License: public domain or MIT-0 (see license blocks at end of each header).
+
+https://github.com/mackron/dr_libs

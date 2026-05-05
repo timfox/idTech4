@@ -421,6 +421,20 @@ ID_TIME_T idSoundSample::GetNewTimeStamp( void ) const {
 		oggName.SetFileExtension( ".ogg" );
 		fileSystem->ReadFile( oggName, NULL, &timestamp );
 	}
+	if ( timestamp == FILE_NOT_FOUND_TIMESTAMP ) {
+		idStr alt = name;
+		alt.StripFileExtension();
+		idStr flacName = alt;
+		flacName.SetFileExtension( ".flac" );
+		fileSystem->ReadFile( flacName, NULL, &timestamp );
+	}
+	if ( timestamp == FILE_NOT_FOUND_TIMESTAMP ) {
+		idStr alt = name;
+		alt.StripFileExtension();
+		idStr mp3Name = alt;
+		mp3Name.SetFileExtension( ".mp3" );
+		fileSystem->ReadFile( mp3Name, NULL, &timestamp );
+	}
 	return timestamp;
 }
 
