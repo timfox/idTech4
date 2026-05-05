@@ -86,6 +86,7 @@ Lighting, denoising, path tracing quality, performance, and compatibility are st
 ## Technology
 
 - Doom 3 / idTech 4
+- **SVG textures** — materials can reference **`.svg`** files; they are rasterized at load time (NanoSVG) to RGBA like other images. Tune with **`r_svgScale`** and **`r_svgMaxDimension`** (see `neo/renderer/R_SvgLoad.cpp`).
 - IceBridge renderer layer
 - Direct3D 12
 - Path tracing

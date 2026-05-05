@@ -30,6 +30,7 @@ If you have questions concerning this license or the applicable additional terms
 #pragma hdrstop
 
 #include "tr_local.h"
+#include "R_SvgLoad.h"
 
 /*
 
@@ -38,6 +39,15 @@ This file only has a single entry point:
 void R_LoadImage( const char *name, byte **pic, int *width, int *height, bool makePowerOf2 );
 
 */
+
+/*
+================
+LoadSVG
+================
+*/
+static void LoadSVG( const char *name, byte **pic, int *width, int *height, ID_TIME_T *timestamp ) {
+	R_LoadSVG( name, pic, width, height, timestamp );
+}
 
 /*
  * Include file for users of JPEG library.
@@ -1034,6 +1044,8 @@ void R_LoadImage( const char *cname, byte **pic, int *width, int *height, ID_TIM
 		LoadBMP( name.c_str(), pic, width, height, timestamp );
 	} else if ( ext == "jpg" ) {
 		LoadJPG( name.c_str(), pic, width, height, timestamp );
+	} else if ( ext == "svg" ) {
+		LoadSVG( name.c_str(), pic, width, height, timestamp );
 	}
 
 	if ( ( width && *width < 1 ) || ( height && *height < 1 ) ) {

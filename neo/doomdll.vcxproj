@@ -1320,6 +1320,8 @@
     <ClCompile Include="renderer\draw_dx.cpp" />
     <ClCompile Include="renderer\GuiModel.cpp" />
     <ClCompile Include="renderer\Image_files.cpp" />
+    <ClCompile Include="renderer\nanosvg_impl.cpp" />
+    <ClCompile Include="renderer\R_SvgLoad.cpp" />
     <ClCompile Include="renderer\Image_init.cpp" />
     <ClCompile Include="renderer\Image_load.cpp" />
     <ClCompile Include="renderer\Image_process.cpp" />
