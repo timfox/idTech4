@@ -85,16 +85,21 @@ BOOL WINAPI qd3d12_wglMakeCurrent(HDC hdc, QD3D12_HGLRC hglrc)
 		IceBridge_RefreshRHIFromCvar();
 		IceBridge_RefreshD3D12RasterFromCvar();
 		if ( QIceBridge_GetRequestedRHI() == QICEBRIDGE_RHI_Vulkan ) {
-			// Try minimal Vulkan bootstrap for diagnostics; we still render through D3D12 until the Vulkan GL shim exists.
-			extern bool IceBridgeVulkan_Init(void);
-			extern void IceBridgeVulkan_LogCaps(void);
-			if ( IceBridgeVulkan_Init() ) {
-				IceBridge_Log( "IceBridge: Vulkan requested; Vulkan bootstrap initialized for diagnostics. Rendering will remain on D3D12 until the Vulkan GL shim is implemented.\n" );
-				IceBridgeVulkan_LogCaps();
+			// Initialize Vulkan shim (skeleton) so we can begin fleshing out parity with D3D12.
+			extern struct QVulkanWindow* QVK_InitForWindow(void* hwnd, int width, int height);
+			extern bool QVK_BeginFrame(struct QVulkanWindow* w);
+			extern bool QVK_EndFrame(struct QVulkanWindow* w);
+			extern bool QVK_Present(struct QVulkanWindow* w);
+			extern void QVK_ShutdownForWindow(struct QVulkanWindow* w);
+			struct QVulkanWindow* vkw = QVK_InitForWindow((void*)ctx->hwnd, w, h);
+			if ( vkw ) {
+				IceBridge_Log( "IceBridge: Vulkan requested; Vulkan GL shim skeleton initialized. Rendering will remain on D3D12 while we build feature parity.\n" );
+				// For now we do not switch rendering; keep D3D12 active until the shim is functional.
+				QIceBridge_SetActiveRHI( QICEBRIDGE_RHI_D3D12 );
 			} else {
-				IceBridge_Log( "IceBridge: Vulkan requested but bootstrap failed; falling back to D3D12.\n" );
+				IceBridge_Log( "IceBridge: Vulkan requested but initialization failed; using D3D12.\n" );
+				QIceBridge_SetActiveRHI( QICEBRIDGE_RHI_D3D12 );
 			}
-			QIceBridge_SetActiveRHI( QICEBRIDGE_RHI_D3D12 );
 		} else {
 			QIceBridge_SetActiveRHI( QICEBRIDGE_RHI_D3D12 );
 		}
