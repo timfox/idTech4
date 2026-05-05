@@ -2321,6 +2321,14 @@ float4 LoadSceneNormal(uint2 pixel)
     return nSample;
 }
 
+// IceBridge packs optional scalar metallic in albedo alpha as (2 + metallic) when set from materials.
+float DecodeIcebridgeMetallicFromAlbedo(float4 albedoSample)
+{
+    if (albedoSample.a > 1.5)
+        return saturate(albedoSample.a - 2.0);
+    return 0.0;
+}
+
 float SafeLengthSq(float3 v)
 {
     return max(dot(v, v), 1e-8);
@@ -3040,7 +3048,7 @@ float Doom3SpecularLookup(float x)
     return pow(x, 16.0);
 }
 
-float3 Doom3PseudoSpecularMask(float3 baseAlbedo)
+float3 Doom3PseudoSpecularMask(float3 baseAlbedo, float metallic)
 {
     // Doom 3 normally uses a dedicated specular map.
     // This pass does not have one bound, so DO NOT square diffuse albedo.
@@ -3053,10 +3061,13 @@ float3 Doom3PseudoSpecularMask(float3 baseAlbedo)
 
     // Slight warm/colored contribution from the diffuse texture, but mostly neutral
     // like a missing/default specular map.
+    float m = saturate(metallic);
     float3 neutralSpec = float3(specStrength, specStrength, specStrength);
     float3 tintedSpec  = saturate(baseAlbedo) * 0.35 + neutralSpec * 0.65;
+    float3 dialectricSpec = max(tintedSpec, float3(0.18, 0.18, 0.18));
+    float3 conductorSpec = max(saturate(baseAlbedo), float3(0.08, 0.08, 0.08));
 
-    return max(tintedSpec, float3(0.18, 0.18, 0.18));
+    return lerp(dialectricSpec, conductorSpec, m);
 }
 
 float3 ComputeSpecular(
@@ -3067,7 +3078,8 @@ float3 ComputeSpecular(
     float lightIntensity,
     float atten,
     float shadow,
-    float3 baseAlbedo)
+    float3 baseAlbedo,
+    float metallic)
 {
     if (gEnableSpecular == 0)
         return 0.0;
@@ -3092,7 +3104,7 @@ float3 ComputeSpecular(
 
     float specTerm = Doom3SpecularLookup(NdotH);
 
-    float3 specMask = Doom3PseudoSpecularMask(baseAlbedo);
+    float3 specMask = Doom3PseudoSpecularMask(baseAlbedo, metallic);
 
     // Doom 3's interaction pass is strongly additive. Keep it punchy,
     // but clamp enough to avoid fireflies with stochastic light sampling.
@@ -3213,7 +3225,8 @@ bool ProjectClipToGBufferCandidate(
     inout float3 bestPos,
     inout float3 bestNormal,
     inout float3 bestAlbedo,
-    inout uint bestGeoFlag)
+    inout uint bestGeoFlag,
+    inout float bestMetallic)
 {
     if (abs(clipPos.w) <= 1e-6)
         return false;
@@ -3251,7 +3264,9 @@ bool ProjectClipToGBufferCandidate(
 
     float4 normalSample = LoadSceneNormal(uint2(ip));
     float3 gbufNormal = SafeNormalizeOr(normalSample.xyz, float3(0.0, 0.0, 1.0));
-    float3 gbufAlbedo = saturate(gAlbedoTex.Load(int3(ip, 0)).rgb);
+    float4 gbufAlbedo4 = gAlbedoTex.Load(int3(ip, 0));
+    float3 gbufAlbedo = saturate(gbufAlbedo4.rgb);
+    float gbufMetallic = DecodeIcebridgeMetallicFromAlbedo(gbufAlbedo4);
 
     bestDistSq = distSq;
     bestPixel = uint2(ip);
@@ -3259,6 +3274,7 @@ bool ProjectClipToGBufferCandidate(
     bestNormal = gbufNormal;
     bestAlbedo = gbufAlbedo;
     bestGeoFlag = DecodeGeometryFlag(posSample.w);
+    bestMetallic = gbufMetallic;
     return true;
 }
 
@@ -3268,7 +3284,8 @@ bool TryFetchGBufferAtRayHit(
     out float3 hitPos,
     out float3 hitNormal,
     out float3 hitAlbedo,
-    out uint hitGeoFlag)
+    out uint hitGeoFlag,
+    out float hitMetallic)
 {
     float bestDistSq = 1.0e30;
     uint2 bestPixel = uint2(0, 0);
@@ -3276,6 +3293,7 @@ bool TryFetchGBufferAtRayHit(
     float3 bestNormal = float3(0.0, 0.0, 1.0);
     float3 bestAlbedo = float3(0.5, 0.5, 0.5);
     uint bestGeoFlag = GEOMETRY_FLAG_NONE;
+    float bestMetallic = 0.0;
 
     // CPU computes gViewProj from the inverse view-projection matrix.  Try both
     // matrix-vector orders and both Y conventions so this remains tolerant of
@@ -3285,10 +3303,10 @@ bool TryFetchGBufferAtRayHit(
     float4 clipB = mul(gViewProj, wpos);
 
     bool found = false;
-    found = ProjectClipToGBufferCandidate(clipA, true,  rayHitPos, bestDistSq, bestPixel, bestPos, bestNormal, bestAlbedo, bestGeoFlag) || found;
-    found = ProjectClipToGBufferCandidate(clipA, false, rayHitPos, bestDistSq, bestPixel, bestPos, bestNormal, bestAlbedo, bestGeoFlag) || found;
-    found = ProjectClipToGBufferCandidate(clipB, true,  rayHitPos, bestDistSq, bestPixel, bestPos, bestNormal, bestAlbedo, bestGeoFlag) || found;
-    found = ProjectClipToGBufferCandidate(clipB, false, rayHitPos, bestDistSq, bestPixel, bestPos, bestNormal, bestAlbedo, bestGeoFlag) || found;
+    found = ProjectClipToGBufferCandidate(clipA, true,  rayHitPos, bestDistSq, bestPixel, bestPos, bestNormal, bestAlbedo, bestGeoFlag, bestMetallic) || found;
+    found = ProjectClipToGBufferCandidate(clipA, false, rayHitPos, bestDistSq, bestPixel, bestPos, bestNormal, bestAlbedo, bestGeoFlag, bestMetallic) || found;
+    found = ProjectClipToGBufferCandidate(clipB, true,  rayHitPos, bestDistSq, bestPixel, bestPos, bestNormal, bestAlbedo, bestGeoFlag, bestMetallic) || found;
+    found = ProjectClipToGBufferCandidate(clipB, false, rayHitPos, bestDistSq, bestPixel, bestPos, bestNormal, bestAlbedo, bestGeoFlag, bestMetallic) || found;
 
     if (!found)
     {
@@ -3297,6 +3315,7 @@ bool TryFetchGBufferAtRayHit(
         hitNormal = bestNormal;
         hitAlbedo = bestAlbedo;
         hitGeoFlag = GEOMETRY_FLAG_NONE;
+        hitMetallic = 0.0;
         return false;
     }
 
@@ -3311,6 +3330,7 @@ bool TryFetchGBufferAtRayHit(
         hitNormal = bestNormal;
         hitAlbedo = bestAlbedo;
         hitGeoFlag = bestGeoFlag;
+        hitMetallic = bestMetallic;
         return false;
     }
 
@@ -3319,6 +3339,7 @@ bool TryFetchGBufferAtRayHit(
     hitNormal = bestNormal;
     hitAlbedo = bestAlbedo;
     hitGeoFlag = bestGeoFlag;
+    hitMetallic = bestMetallic;
     return true;
 }
 
@@ -3347,7 +3368,7 @@ float3 EstimatePathTracedSky(float3 worldPos, float3 N, inout uint rng)
     return accum * 0.55;
 }
 
-float3 PathTraceDirectPointLight(uint2 pixel, float3 worldPos, float3 N, float3 V, float3 baseAlbedo, Light Lgt, inout uint rng, out float3 specularOut)
+float3 PathTraceDirectPointLight(uint2 pixel, float3 worldPos, float3 N, float3 V, float3 baseAlbedo, float metallic, Light Lgt, inout uint rng, out float3 specularOut)
 {
     specularOut = 0.0;
 
@@ -3399,7 +3420,7 @@ float3 PathTraceDirectPointLight(uint2 pixel, float3 worldPos, float3 N, float3 
             shadow = TraceVisibilityBiased(worldPos, N, L, dist);
 
         if (Lgt.pointRadiusPad <= 0.5)
-            specAccum += ComputeSpecular(N, V, L, Lgt.color, Lgt.intensity, atten, shadow, baseAlbedo);
+            specAccum += ComputeSpecular(N, V, L, Lgt.color, Lgt.intensity, atten, shadow, baseAlbedo, metallic);
 
         diffuseAccum += Lgt.color * (Lgt.intensity * atten * NdotLWrap * shadow);
     }
@@ -3409,7 +3430,7 @@ float3 PathTraceDirectPointLight(uint2 pixel, float3 worldPos, float3 N, float3 
     return diffuseAccum * invSamples;
 }
 
-float3 PathTraceDirectSpotLight(float3 worldPos, float3 N, float3 V, float3 baseAlbedo, Light Lgt, inout uint rng, out float3 specularOut)
+float3 PathTraceDirectSpotLight(float3 worldPos, float3 N, float3 V, float3 baseAlbedo, float metallic, Light Lgt, inout uint rng, out float3 specularOut)
 {
     specularOut = 0.0;
 
@@ -3429,12 +3450,12 @@ float3 PathTraceDirectSpotLight(float3 worldPos, float3 N, float3 V, float3 base
         shadow = TraceVisibilityBiased(worldPos, N, L, dist);
 
     if (Lgt.pointRadiusPad <= 0.5)
-        specularOut = ComputeSpecular(N, V, L, Lgt.color, Lgt.intensity, atten, shadow, baseAlbedo);
+        specularOut = ComputeSpecular(N, V, L, Lgt.color, Lgt.intensity, atten, shadow, baseAlbedo, metallic);
 
     return Lgt.color * (Lgt.intensity * atten * NdotLWrap * shadow);
 }
 
-float3 PathTraceDirectRectLight(uint2 pixel, float3 worldPos, float3 N, float3 V, float3 baseAlbedo, Light Lgt, inout uint rng, out float3 specularOut)
+float3 PathTraceDirectRectLight(uint2 pixel, float3 worldPos, float3 N, float3 V, float3 baseAlbedo, float metallic, Light Lgt, inout uint rng, out float3 specularOut)
 {
     specularOut = 0.0;
 
@@ -3500,7 +3521,8 @@ float3 PathTraceDirectRectLight(uint2 pixel, float3 worldPos, float3 N, float3 V
                 Lgt.intensity * faceTerm,
                 1.0,
                 shadow,
-                baseAlbedo) * atten;
+                baseAlbedo,
+                metallic) * atten;
         }
 
         diffuseAccum += clamp(Lgt.color * (Lgt.intensity * NdotL * faceTerm * atten * shadow), 0.0, 4.0);
@@ -3624,6 +3646,79 @@ float3 EstimatePathTracedVolumetricScattering(uint2 pixel, float3 worldPos, inou
 }
 )"
 R"(
+float3 BounceSpecularContribution(float3 hitPos, float3 hitN, float3 hitV, float3 hitAlbedo, float metallic, Light Lgt)
+{
+    if (gEnableSpecular == 0 || metallic <= 0.001)
+        return 0.0;
+
+    if (Lgt.type == GL_RAYTRACING_LIGHT_TYPE_POINT)
+    {
+        float3 toLight = Lgt.position - hitPos;
+        float dist = length(toLight);
+        if (dist <= 0.01)
+            return 0.0;
+
+        float3 L = toLight / dist;
+        float atten = ComputePointLightAttenuation(hitPos, Lgt);
+        if (atten <= 0.0)
+            return 0.0;
+
+        return ComputeSpecular(hitN, hitV, L, Lgt.color, Lgt.intensity, atten, 1.0, hitAlbedo, metallic) * 0.22;
+    }
+    else if (Lgt.type == GL_RAYTRACING_LIGHT_TYPE_SPOT)
+    {
+        float3 toLight = Lgt.position - hitPos;
+        float dist = length(toLight);
+        if (dist <= 0.01)
+            return 0.0;
+
+        float3 L = toLight / dist;
+        float atten = ComputeSpotLightAttenuation(hitPos, Lgt);
+        if (atten <= 0.0)
+            return 0.0;
+
+        return ComputeSpecular(hitN, hitV, L, Lgt.color, Lgt.intensity, atten, 1.0, hitAlbedo, metallic) * 0.22;
+    }
+    else if (Lgt.type == GL_RAYTRACING_LIGHT_TYPE_RECT)
+    {
+        float3 toCenter = Lgt.position - hitPos;
+        float centerDist = length(toCenter);
+        if (centerDist <= 0.01)
+            return 0.0;
+
+        float attenRadius = max(Lgt.radius, 1e-4);
+        float atten = saturate((attenRadius - centerDist) / attenRadius);
+        atten = atten * atten;
+        if (atten <= 0.0)
+            return 0.0;
+
+        float3 L = toCenter / centerDist;
+        float nDotL = saturate(dot(hitN, L));
+        if (nDotL <= 0.0)
+            return 0.0;
+
+        float faceTerm = (Lgt.twoSided != 0)
+            ? abs(dot(-L, Lgt.normal))
+            : saturate(dot(-L, Lgt.normal));
+
+        if (faceTerm <= 0.0)
+            return 0.0;
+
+        return ComputeSpecular(
+            hitN,
+            hitV,
+            L,
+            Lgt.color,
+            Lgt.intensity * faceTerm,
+            1.0,
+            1.0,
+            hitAlbedo,
+            metallic) * atten * 0.18;
+    }
+
+    return 0.0;
+}
+
 float3 EstimateFastBounceLight(float3 hitPos, float3 hitN, Light Lgt)
 {
     // Secondary-bounce lighting needs to be cheap.  The primary pass already casts
@@ -3695,7 +3790,7 @@ float3 EstimateFastBounceLight(float3 hitPos, float3 hitN, Light Lgt)
     return 0.0;
 }
 
-float3 EstimateDirectLightingForBounceHit(uint2 hitPixel, float3 hitPos, float3 hitN, float3 hitV, float3 hitAlbedo, uint hitGeoFlag, inout uint rng)
+float3 EstimateDirectLightingForBounceHit(uint2 hitPixel, float3 hitPos, float3 hitN, float3 hitV, float3 hitAlbedo, uint hitGeoFlag, float hitMetallic, inout uint rng)
 {
     bool hitIsSkeletal = (hitGeoFlag & GEOMETRY_FLAG_SKELETAL) != 0u;
     bool hitIsUnlit    = (hitGeoFlag & GEOMETRY_FLAG_UNLIT)    != 0u;
@@ -3717,10 +3812,13 @@ float3 EstimateDirectLightingForBounceHit(uint2 hitPixel, float3 hitPos, float3 
     // That preserves the "all lights bounce" behavior while making the cost
     // roughly one extra bounce TraceRay() per indirect path instead of one bounce
     // TraceRay() plus many more visibility TraceRay() calls.
+    float3 specularAdd = 0.0;
+
     [loop]
     for (uint i = 0; i < gLightCount; ++i)
     {
         lighting += EstimateFastBounceLight(hitPos, hitN, gLights[i]);
+        specularAdd += BounceSpecularContribution(hitPos, hitN, hitV, hitAlbedo, hitMetallic, gLights[i]);
     }
 
     if (hitIsSkeletal)
@@ -3729,7 +3827,8 @@ float3 EstimateDirectLightingForBounceHit(uint2 hitPixel, float3 hitPos, float3 
     // Return outgoing diffuse radiance from the bounce surface.  The caller adds
     // this as incoming indirect light at the primary surface; primary albedo is
     // applied later in RayGen just like direct lighting.
-    return max(hitAlbedo * max(lighting, 0.0), 0.0);
+    float3 diffuseOut = max(hitAlbedo * max(lighting, 0.0), 0.0);
+    return diffuseOut + max(specularAdd, 0.0);
 }
 
 )"
@@ -3799,7 +3898,9 @@ float3 EstimateReactiveScreenSpaceFinalGather(uint2 pixel, float3 worldPos, floa
         float4 samplePos4 = gPositionTex.Load(int3(sp, 0));
         float3 samplePos = samplePos4.xyz;
         uint sampleGeoFlag = DecodeGeometryFlag(samplePos4.w);
-        float3 sampleAlbedo = saturate(gAlbedoTex.Load(int3(sp, 0)).rgb);
+        float4 sampleAlbedo4 = gAlbedoTex.Load(int3(sp, 0));
+        float3 sampleAlbedo = saturate(sampleAlbedo4.rgb);
+        float sampleMetallic = DecodeIcebridgeMetallicFromAlbedo(sampleAlbedo4);
         float3 sampleNormal = SafeNormalizeOr(gNormalTex.Load(int3(sp, 0)).xyz, N);
 
         float3 delta = samplePos - worldPos;
@@ -3841,6 +3942,7 @@ float3 EstimateReactiveScreenSpaceFinalGather(uint2 pixel, float3 worldPos, floa
             sampleView,
             sampleAlbedo,
             sampleGeoFlag,
+            sampleMetallic,
             rng);
 
         accum += outgoingRadiance * formWeight;
@@ -3912,6 +4014,7 @@ float3 TraceOneIndirectBouncePath(uint2 pixel, float3 worldPos, float3 N, float3
         float3 hitNormal = SafeNormalizeOr(-bounceDir, pathNormal);
         float3 hitAlbedo = float3(0.55, 0.55, 0.55);
         uint hitGeoFlag = GEOMETRY_FLAG_NONE;
+        float hitMetallic = 0.0;
 
         bool hasGBufferMaterial = TryFetchGBufferAtRayHit(
             rayHitPos,
@@ -3919,7 +4022,8 @@ float3 TraceOneIndirectBouncePath(uint2 pixel, float3 worldPos, float3 N, float3
             hitPos,
             hitNormal,
             hitAlbedo,
-            hitGeoFlag);
+            hitGeoFlag,
+            hitMetallic);
 
         // If the G-buffer normal points away from the incoming bounce ray, flip it
         // so direct lighting at the secondary hit is evaluated on the side that
@@ -3935,6 +4039,7 @@ float3 TraceOneIndirectBouncePath(uint2 pixel, float3 worldPos, float3 N, float3
             hitV,
             hitAlbedo,
             hitGeoFlag,
+            hitMetallic,
             rng);
 
         if (!hasGBufferMaterial)
@@ -3986,7 +4091,7 @@ float3 EstimatePathTracedIndirectBounce(uint2 pixel, float3 worldPos, float3 N, 
     return accum * INDIRECT_STRENGTH;
 }
 
-float3 PathTraceLightingSample(uint2 pixel, float3 worldPos, float3 N, float3 V, float3 baseAlbedo, bool isSkeletal, inout uint rng, out float3 specularAccum)
+float3 PathTraceLightingSample(uint2 pixel, float3 worldPos, float3 N, float3 V, float3 baseAlbedo, float metallic, bool isSkeletal, inout uint rng, out float3 specularAccum)
 {
     specularAccum = 0.0;
 
@@ -4028,15 +4133,15 @@ float3 PathTraceLightingSample(uint2 pixel, float3 worldPos, float3 N, float3 V,
 
         if (Lgt.type == GL_RAYTRACING_LIGHT_TYPE_POINT)
         {
-            diffuse = PathTraceDirectPointLight(pixel, worldPos, N, V, baseAlbedo, Lgt, rng, spec);
+            diffuse = PathTraceDirectPointLight(pixel, worldPos, N, V, baseAlbedo, metallic, Lgt, rng, spec);
         }
         else if (Lgt.type == GL_RAYTRACING_LIGHT_TYPE_SPOT)
         {
-            diffuse = PathTraceDirectSpotLight(worldPos, N, V, baseAlbedo, Lgt, rng, spec);
+            diffuse = PathTraceDirectSpotLight(worldPos, N, V, baseAlbedo, metallic, Lgt, rng, spec);
         }
         else if (Lgt.type == GL_RAYTRACING_LIGHT_TYPE_RECT)
         {
-            diffuse = PathTraceDirectRectLight(pixel, worldPos, N, V, baseAlbedo, Lgt, rng, spec);
+            diffuse = PathTraceDirectRectLight(pixel, worldPos, N, V, baseAlbedo, metallic, Lgt, rng, spec);
         }
 
         lightingAccum += diffuse;
@@ -4074,6 +4179,7 @@ void RayGen()
     }
 
     float3 baseAlbedo     = albedoSample.rgb;
+    float metallic        = DecodeIcebridgeMetallicFromAlbedo(albedoSample);
     float4 positionSample = gPositionTex.Load(int3(pixel, 0));
     float3 worldPos       = positionSample.xyz;
     float4 normalSample   = LoadSceneNormal(pixel);
@@ -4126,6 +4232,7 @@ void RayGen()
             N,
             V,
             baseAlbedo,
+            metallic,
             isSkeletal,
             rng,
             specularAccum);

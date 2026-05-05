@@ -122,6 +122,13 @@ void idMaterial::CommonInit() {
 	decalInfo.end[1] = 0;
 	decalInfo.end[2] = 0;
 	decalInfo.end[3] = 0;
+
+	pbrRoughness = 0.5f;
+	pbrMetallic = 0.0f;
+	pbrMaterialType = 0.0f;
+	explicitPbrRoughness = false;
+	explicitPbrMetallic = false;
+	explicitPbrMaterialType = false;
 }
 
 /*
@@ -1987,6 +1994,25 @@ void idMaterial::ParseMaterial( idLexer &src ) {
 		else if ( !token.Icmp( "spectrum" ) ) {
 			src.ReadTokenOnLine( &token );
 			spectrum = atoi( token.c_str() );
+			continue;
+		}
+		// IceBridge / Vulkan-oriented PBR scalars (G-buffer packs roughness in normal RT alpha).
+		else if ( !token.Icmp( "pbrRoughness" ) || !token.Icmp( "roughness" ) ) {
+			src.ReadTokenOnLine( &token );
+			pbrRoughness = idMath::ClampFloat( 0.0f, 1.0f, token.GetFloatValue() );
+			explicitPbrRoughness = true;
+			continue;
+		}
+		else if ( !token.Icmp( "pbrMetallic" ) || !token.Icmp( "metallic" ) ) {
+			src.ReadTokenOnLine( &token );
+			pbrMetallic = idMath::ClampFloat( 0.0f, 1.0f, token.GetFloatValue() );
+			explicitPbrMetallic = true;
+			continue;
+		}
+		else if ( !token.Icmp( "pbrMaterialType" ) || !token.Icmp( "materialType" ) ) {
+			src.ReadTokenOnLine( &token );
+			pbrMaterialType = token.GetFloatValue();
+			explicitPbrMaterialType = true;
 			continue;
 		}
 		// deform < sprite | tube | flare >

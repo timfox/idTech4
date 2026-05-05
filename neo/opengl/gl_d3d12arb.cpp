@@ -1079,6 +1079,7 @@ cbuffer DrawCB : register(b0)
     float gTexEnvMode1;
     float geometryFlag;
     float gRoughness;
+    float gMetallic;
 
     float gFogEnabled;
     float gFogMode;

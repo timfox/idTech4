@@ -451,6 +451,7 @@ struct DrawConstants
 	float texEnvMode1;
 	float geometryFlag;
 	float roughness;
+	float metallic;
 
 	float fogEnabled;
 	float fogMode;
@@ -609,6 +610,7 @@ struct BatchKey
 
 	float geometryFlag = 0.0f;
 	float roughness = 0.5f;
+	float metallic = -1.0f;
 	float materialType = 0.0f;
 	GLuint motionObjectId = 0;
 };
@@ -696,6 +698,7 @@ static bool BatchKeyEquals(const BatchKey& a, const BatchKey& b)
 		a.depthFunc == b.depthFunc &&
 		a.geometryFlag == b.geometryFlag &&
 		a.roughness == b.roughness &&
+		a.metallic == b.metallic &&
 		a.materialType == b.materialType &&
 		a.motionObjectId == b.motionObjectId &&
 		TextureSrvArrayEquals(a.textureSrvIndex, b.textureSrvIndex) &&
@@ -960,6 +963,7 @@ struct GLState
 
 	GLuint currentMotionObjectId = 0;
 	float currentSurfaceRoughness = 0.5f;
+	float currentSurfaceMetallic = -1.0f;
 	float currentMaterialType = 0.0f;
 	uint32_t currentRayMaterialFlags = 0;
 	std::unordered_map<GLuint, Mat4> prevObjectMVPs;
@@ -1952,6 +1956,7 @@ cbuffer DrawCB : register(b0)
     float gTexEnvMode1;
     float geometryFlag;
     float gRoughness;
+    float gMetallic;
 
     float gFogEnabled;
     float gFogMode;
@@ -2320,6 +2325,16 @@ float4 BuildTexturedColor(VSOut i)
     return outColor;
 }
 
+float4 PackAlbedoMetallic(float4 color, float metallicChannel)
+{
+    // metallicChannel < 0: preserve texture alpha (no material override).
+    // metallicChannel >= 0: store scalar metallic in alpha as (2 + m) for DXR decode.
+    if (metallicChannel < 0.0)
+        return color;
+    color.a = 2.0 + saturate(metallicChannel);
+    return color;
+}
+
 float2 ClipToUv(float4 clipPos)
 {
     float2 ndc = clipPos.xy / max(abs(clipPos.w), 1e-6);
@@ -2364,7 +2379,7 @@ VSOut VSMain(VSIn i)
     o.normal = normalize(worldNormal);
     o.tangent = normalize(worldTangent);
     o.binormal = normalize(worldBinormal);
-    o.attr = float4(geometryFlag, gRoughness, gMaterialType, 0.0);
+    o.attr = float4(geometryFlag, gRoughness, gMaterialType, gMetallic);
     o.psize = gPointSize;
     return o;
 }
@@ -2372,7 +2387,7 @@ VSOut VSMain(VSIn i)
 PSOut PSMain(VSOut i)
 {
     PSOut o;
-    o.color = BuildTexturedColor(i);
+    o.color = PackAlbedoMetallic(BuildTexturedColor(i), i.attr.w);
     o.normal = float4(BuildGBufferNormal(i), i.attr.y);
     o.position = float4(i.worldPos, i.attr.x);
     o.velocity = BuildVelocity(i);
@@ -2382,8 +2397,9 @@ PSOut PSMain(VSOut i)
 PSOut PSMainAlphaTest(VSOut i)
 {
     PSOut o;
-    o.color = BuildTexturedColor(i);
-    QD3D12_AlphaTest(o.color.a);
+    float4 lit = BuildTexturedColor(i);
+    QD3D12_AlphaTest(lit.a);
+    o.color = PackAlbedoMetallic(lit, i.attr.w);
     o.normal = float4(BuildGBufferNormal(i), i.attr.y);
     o.position = float4(i.worldPos, i.attr.x);
     o.velocity = BuildVelocity(i);
@@ -2393,7 +2409,7 @@ PSOut PSMainAlphaTest(VSOut i)
 PSOut PSMainUntextured(VSOut i)
 {
     PSOut o;
-    o.color = ApplyFog(i.col, i.fogCoord);
+    o.color = PackAlbedoMetallic(ApplyFog(i.col, i.fogCoord), i.attr.w);
     o.normal = float4(BuildGBufferNormal(i), i.attr.y);
     o.position = float4(i.worldPos, i.attr.x);
     o.velocity = BuildVelocity(i);
@@ -3006,6 +3022,7 @@ static BatchKey BuildCurrentBatchKey(GLenum originalMode, const TextureResource*
 	QD3D12_UpdateCameraInfoFromCurrentMatrices();
 	key.geometryFlag = QD3D12_CurrentEffectiveGeometryFlag();
 	key.roughness = g_gl.currentSurfaceRoughness;
+	key.metallic = g_gl.currentSurfaceMetallic;
 	key.materialType = QD3D12_CurrentEffectiveMaterialType();
 	g_gl.currObjectMVPs[key.motionObjectId] = key.mvp;
 	return key;
@@ -7541,6 +7558,7 @@ static void QD3D12_FlushQueuedBatches()
 		dc->prevMvp = batch.key.prevMvp;
 		dc->geometryFlag = batch.key.geometryFlag;
 		dc->roughness = batch.key.roughness;
+		dc->metallic = batch.key.metallic;
 		dc->materialType = batch.key.materialType;
 		dc->alphaFunc = batch.key.alphaFunc;
 		dc->modelMatrix = batch.key.modelMatrix;
@@ -11647,6 +11665,11 @@ void APIENTRY glMotionObjectIdui(GLuint objectId)
 void APIENTRY glSurfaceRoughnessf(GLfloat roughness)
 {
 	g_gl.currentSurfaceRoughness = ClampValue<float>(roughness, 0.0f, 1.0f);
+}
+
+void APIENTRY glSurfaceMetallicf(GLfloat metallic)
+{
+	g_gl.currentSurfaceMetallic = metallic;
 }
 
 void APIENTRY glMaterialTypef(GLfloat materialType)
