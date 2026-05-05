@@ -127,6 +127,10 @@ Useful **id Tech 5–era directions** for this codebase—**multi-core–friendl
 
 HUD **area names** and optional **district** grouping for `info_location` / `location_separator` are documented in [docs/DISTRICT_SYSTEM.md](docs/DISTRICT_SYSTEM.md) (priority overlap, CVars, console commands).
 
+## GOAP (optional AI planner)
+
+**Goal-Oriented Action Planning** for monsters (`idAI`): enable per-entity with spawn key **`goap` `1`**, optional **`goap_meleeDef`**, **`goap_goal`**, **`goap_replan_ms`**; global CVars **`g_goap`**, **`g_goapDebug`**, **`g_goapMaxNodes`**. See [docs/GOAP_AI.md](docs/GOAP_AI.md).
+
 ## AIML 3.0 (experimental Core interpreter)
 
 The [AIML 3.0 draft spec](https://github.com/timfox/aiml-3.0-spec) is vendored as a git submodule at **`third_party/aiml-3.0-spec`**. Clone with submodules:

@@ -788,6 +788,21 @@ protected:
 	void 					Event_CanReachEntity( idEntity *ent );
 	void					Event_CanReachEnemy( void );
 	void					Event_GetReachableEntityPosition( idEntity *ent );
+
+private:
+	// GOAP (optional goal-oriented planner; see ai/AI_GOAP.cpp, spawn key "goap" "1")
+	bool					goapEnabled;
+	unsigned int			goapGoalMask;
+	int						goapReplanInterval;
+	int						goapPlanStep;
+	idList<int>				goapPlan;
+	int						goapLastPlanTime;
+	bool					goapWaitingMove;
+
+	void					GoapInitFromSpawn( void );
+	unsigned int			GoapBuildWorldMask( void ) const;
+	bool					GoapPlan( void );
+	void					GoapExecute( void );
 };
 
 class idCombatNode : public idEntity {

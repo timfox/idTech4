@@ -44,6 +44,7 @@ game_string = ' \
 	ai/AAS_pathing.cpp \
 	ai/AAS_routing.cpp \
 	ai/AI.cpp \
+	ai/AI_GOAP.cpp \
 	ai/AI_events.cpp \
 	ai/AI_pathing.cpp \
 	ai/AI_Vagary.cpp \

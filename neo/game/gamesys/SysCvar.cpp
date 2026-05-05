@@ -156,6 +156,10 @@ idCVar ai_showCombatNodes(			"ai_showCombatNodes",		"0",			CVAR_GAME | CVAR_BOOL
 idCVar ai_showPaths(				"ai_showPaths",				"0",			CVAR_GAME | CVAR_BOOL, "draws path_* entities" );
 idCVar ai_showObstacleAvoidance(	"ai_showObstacleAvoidance",	"0",			CVAR_GAME | CVAR_INTEGER, "draws obstacle avoidance information for monsters.  if 2, draws obstacles for player, as well", 0, 2, idCmdSystem::ArgCompletion_Integer<0,2> );
 idCVar ai_blockedFailSafe(			"ai_blockedFailSafe",		"1",			CVAR_GAME | CVAR_BOOL, "enable blocked fail safe handling" );
+
+idCVar g_goap(						"g_goap",					"1",			CVAR_GAME | CVAR_BOOL, "enable GOAP layer for monsters with spawn key goap 1" );
+idCVar g_goapDebug(				"g_goapDebug",				"0",			CVAR_GAME | CVAR_BOOL, "print GOAP planning messages" );
+idCVar g_goapMaxNodes(				"g_goapMaxNodes",			"512",			CVAR_GAME | CVAR_INTEGER, "max A* expansions per GOAP replan", 32, 4096 );
 	
 idCVar g_dvTime(					"g_dvTime",					"1",			CVAR_GAME | CVAR_FLOAT, "" );
 idCVar g_dvAmplitude(				"g_dvAmplitude",			"0.001",		CVAR_GAME | CVAR_FLOAT, "" );
