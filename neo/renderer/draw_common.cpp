@@ -372,6 +372,11 @@ void RB_T_FillDepthBuffer( const drawSurf_t *surf ) {
 
 	glLoadModelMatrixf(surf->space->modelMatrix);
 
+	// Defaults for IceBridge G-buffer scalars; materials may override below.
+	glSurfaceRoughnessf( 0.5f );
+	glSurfaceMetallicf( -1.0f );
+	glMaterialTypef( 0.0f );
+
 	if ( !shader->IsDrawn() ) {
 		return;
 	}
@@ -519,6 +524,16 @@ void RB_T_FillDepthBuffer( const drawSurf_t *surf ) {
 		else
 		{
 			glGeometryFlagf(GEOMETRY_FLAG_SKELETAL);
+		}
+
+		if ( shader->HasExplicitPbrRoughness() ) {
+			glSurfaceRoughnessf( shader->GetPbrRoughness() );
+		}
+		if ( shader->HasExplicitPbrMetallic() ) {
+			glSurfaceMetallicf( shader->GetPbrMetallic() );
+		}
+		if ( shader->HasExplicitPbrMaterialType() ) {
+			glMaterialTypef( shader->GetPbrMaterialType() );
 		}
 
 		// set texture matrix and texGens.  The Quake 4 path needs to know this is a depth fill.

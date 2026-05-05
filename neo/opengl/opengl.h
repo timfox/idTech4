@@ -1548,6 +1548,9 @@ enum GeometryFlag_t
 };
 
 void APIENTRY glGeometryFlagf(GLfloat flag);
+void APIENTRY glSurfaceRoughnessf(GLfloat roughness);
+void APIENTRY glSurfaceMetallicf(GLfloat metallic);
+void APIENTRY glMaterialTypef(GLfloat materialType);
 
 #endif
 

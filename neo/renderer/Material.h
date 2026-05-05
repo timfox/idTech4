@@ -549,6 +549,14 @@ public:
 	float				GetSurfaceArea( void ) const { return surfaceArea; }
 	void				AddToSurfaceArea( float area ) { surfaceArea += area; }
 
+	// IceBridge / future-Vulkan G-buffer: scalar PBR parameters (optional overrides in .mtr).
+	float				GetPbrRoughness( void ) const { return pbrRoughness; }
+	bool				HasExplicitPbrRoughness( void ) const { return explicitPbrRoughness; }
+	float				GetPbrMetallic( void ) const { return pbrMetallic; }
+	bool				HasExplicitPbrMetallic( void ) const { return explicitPbrMetallic; }
+	bool				HasExplicitPbrMaterialType( void ) const { return explicitPbrMaterialType; }
+	float				GetPbrMaterialType( void ) const { return pbrMaterialType; }
+
 	//------------------------------------------------------------------
 
 						// returns the length, in milliseconds, of the videoMap on this material,
@@ -688,6 +696,14 @@ private:
 	bool				suppressInSubview;
 	bool				portalSky;
 	int					refCount;
+
+	// Physical shading hints for the D3D12/Vulkan compatibility path (normal RT alpha = roughness).
+	float				pbrRoughness;
+	float				pbrMetallic;
+	float				pbrMaterialType;
+	bool				explicitPbrRoughness;
+	bool				explicitPbrMetallic;
+	bool				explicitPbrMaterialType;
 };
 
 typedef idList<const idMaterial *> idMatList;

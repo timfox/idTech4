@@ -107,6 +107,8 @@ A future **Vulkan ray tracing** path would port the **`glRaytracing*`** stack—
 make -C tools/vulkanrt_caps && ./tools/vulkanrt_caps/vulkanrt_caps
 ```
 
+**PBR scalars (shared D3D12 / Vulkan G-buffer):** in `.mtr` files you can set `pbrRoughness` / `roughness` (0–1), `pbrMetallic` / `metallic` (0–1), and `pbrMaterialType` / `materialType` (float). Roughness continues to use the normal-buffer alpha channel; when metallic is set, scalar metalness is packed into **albedo alpha** as `2 + metallic` so it does not collide with ordinary texture alpha. The DXR lighting pass decodes metallic for stronger specular on metals.
+
 ## About IceBridge
 
 IceBridge is designed to bring modern rendering capabilities to legacy engines without requiring the entire game renderer to be rewritten from scratch.
