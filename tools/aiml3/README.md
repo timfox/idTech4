@@ -2,7 +2,9 @@
 
 This directory contains a **small C++17** implementation of the **AIML 3.0 Core Dialog** subset from [timfox/aiml-3.0-spec](https://github.com/timfox/aiml-3.0-spec) (vendored under `third_party/aiml-3.0-spec`).
 
-It is intended as a **portable reference** for normalization, match precedence, and template evaluation—not a full production stack (no USD, no extended modules, no full XML namespaces).
+It is intended as a **portable reference** for normalization, match precedence, and template evaluation—not a full production stack (no OpenUSD runtime, no extended modules, no full XML namespaces).
+
+**USDA (ASCII Universal Scene Description)** for AIML-shaped `AimlCategory` prims is supported as a **custom interpreter** in `load_usda.cpp` (subset: `def AimlCategory`, `string pattern` / `that` / `topic` / `template`, optional `customData = { string cooldown = "..." }`, optional `custom string[] directives|requires|unless|effects` per the spec appendix). This is **not** a general USD stage engine.
 
 ## Conformance (approximate)
 
@@ -26,6 +28,8 @@ make -C tools/aiml3
 ./tools/aiml3/aiml3 --load pack.json
 # or
 ./tools/aiml3/aiml3 --load bot.aiml
+# or (USDA subset for AimlCategory)
+./tools/aiml3/aiml3 --load test/hello.usda
 ```
 
 Type lines of input; `quit` exits.
@@ -34,6 +38,7 @@ Type lines of input; `quit` exits.
 
 - **JSON:** `categories` array (or `aiml.categories`), each item: `pattern`, optional `that`, optional `topic`, `template` as string or `{ "say": "..." }`.
 - **XML:** root `<aiml>`, `<category>` with `<pattern>`, optional `<that>`, optional `<template>` — **no namespace** elements only for this tool.
+- **USDA:** see `test/hello.usda` and [../../docs/USD_AIML_INTERPRETER.md](../../docs/USD_AIML_INTERPRETER.md).
 
 ## Submodule
 

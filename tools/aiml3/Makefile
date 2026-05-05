@@ -3,7 +3,7 @@
 CXX ?= g++
 CXXFLAGS ?= -std=c++17 -O2 -Wall -Wextra -I.
 
-SRCS := main.cpp normalize.cpp match.cpp template.cpp interpreter.cpp load_json.cpp load_xml.cpp
+SRCS := main.cpp normalize.cpp match.cpp template.cpp interpreter.cpp load_json.cpp load_xml.cpp load_usda.cpp
 OBJS := $(SRCS:.cpp=.o)
 TARGET := aiml3
 

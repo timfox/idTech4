@@ -8,7 +8,7 @@
 static void usage() {
 	std::fprintf( stderr,
 		"aiml3 — AIML 3.0 Core Dialog reference interpreter (experimental)\n"
-		"  aiml3 --load <file.aiml|file.json> [--srai-depth N]\n"
+		"  aiml3 --load <file.aiml|file.json|file.usda> [--srai-depth N]\n"
 		"  Reads lines from stdin; type quit to exit.\n"
 		"  Spec submodule: third_party/aiml-3.0-spec\n" );
 }
@@ -44,6 +44,8 @@ int main( int argc, char **argv ) {
 	bool ok = false;
 	if ( ext && ( std::strcmp( ext, ".json" ) == 0 || std::strcmp( ext, ".aimlj" ) == 0 ) ) {
 		ok = aiml3::load_json_file( interp, loadPath, err );
+	} else if ( ext && std::strcmp( ext, ".usda" ) == 0 ) {
+		ok = aiml3::load_usda_file( interp, loadPath, err );
 	} else {
 		ok = aiml3::load_xml_file( interp, loadPath, err );
 	}
