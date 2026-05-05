@@ -12,6 +12,16 @@ The goal is to enhance it with modern rendering techniques while preserving the 
 
 No game assets are included in this fork.
 
+## Linux / Steam Deck and Vulkan (raster)
+
+**Steam Deck** does not offer practical **hardware ray tracing** for this engine’s DXR-style path. Portable work should prioritize **Vulkan raster** (swapchain, passes, post), **asset and pak loading**, and **media** (see [docs/VULKAN_PLATFORM_STEAMDECK.md](docs/VULKAN_PLATFORM_STEAMDECK.md)).
+
+Quick **Vulkan driver / extension check** (Linux, `libvulkan.so.1`):
+
+```bash
+make -C tools/vulkan_caps && ./tools/vulkan_caps/vulkan_caps
+```
+
 ## What Is IceBridge?
 
 **IceBridge** is a compatibility and modernization renderer layer for older engines.
