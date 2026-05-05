@@ -87,7 +87,7 @@ Lighting, denoising, path tracing quality, performance, and compatibility are st
 
 - Doom 3 / idTech 4
 - **SVG textures** — materials can reference **`.svg`** files; they are rasterized at load time (NanoSVG) to RGBA like other images. Tune with **`r_svgScale`** and **`r_svgMaxDimension`** (see `neo/renderer/R_SvgLoad.cpp`).
-- **Extra audio codecs** — alongside **`.wav`** / **`.ogg`**, the sound cache will pick up a same-base-name **`.flac`** or **`.mp3`** if present (decoded with [dr_libs](https://github.com/mackron/dr_libs) in `neo/sound/`). Non-44.1/22.05/11.025 kHz sources are resampled to **44.1 kHz** for compatibility with existing sample validation.
+- **Extra audio codecs** — **`.flac`** and **`.mp3`** work when referenced by full path (e.g. `sound/foo.flac`) and as a **same-base-name** fallback after **`.ogg`** when assets still use **`foo.wav`**-style names (decoded with [dr_libs](https://github.com/mackron/dr_libs): `neo/sound/snd_wavefile.cpp`, `neo/sound/snd_dr_libs.cpp`). Non-44.1/22.05/11.025 kHz sources are resampled to **44.1 kHz** for compatibility with existing sample validation.
 - IceBridge renderer layer
 - Direct3D 12
 - Path tracing

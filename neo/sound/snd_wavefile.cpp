@@ -215,6 +215,16 @@ int idWaveFile::Open( const char* strFileName, waveformatex_t* pwfx ) {
 		return -1;
 	}
 
+	idStr ext;
+	idStr( strFileName ).ExtractFileExtension( ext );
+	ext.ToLower();
+	if ( ext == "flac" ) {
+		return OpenFLACorMP3( strFileName, pwfx, true );
+	}
+	if ( ext == "mp3" ) {
+		return OpenFLACorMP3( strFileName, pwfx, false );
+	}
+
 	idStr name = strFileName;
 
 	// note: used to only check for .wav when making a build
