@@ -83,6 +83,7 @@ BOOL WINAPI qd3d12_wglMakeCurrent(HDC hdc, QD3D12_HGLRC hglrc)
 	if (!ctx->initialized)
     {
 		IceBridge_RefreshRHIFromCvar();
+		IceBridge_RefreshD3D12RasterFromCvar();
 		if ( QIceBridge_GetRequestedRHI() == QICEBRIDGE_RHI_Vulkan ) {
 			IceBridge_Log( "IceBridge: Vulkan backend requested but not implemented yet; using D3D12 (DXR path).\n" );
 			QIceBridge_SetActiveRHI( QICEBRIDGE_RHI_D3D12 );

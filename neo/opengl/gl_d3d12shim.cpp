@@ -56,6 +56,8 @@ using Microsoft::WRL::ComPtr;
 
 #include "opengl.h"
 #include "gl_d3d12arb.h"
+#include "icebridge_rhi.h"
+#include "third_party/directx/d3dx12.h"
 
 
 #ifndef GL_COMPRESSED_RGB_S3TC_DXT1_EXT
@@ -1117,6 +1119,7 @@ struct GLState
 	UINT srvStride = 0;
 
 	ComPtr<ID3D12GraphicsCommandList> cmdList;
+	ComPtr<ID3D12GraphicsCommandList6> cmdList6;
 
 	ComPtr<ID3D12Fence> fence;
 	HANDLE fenceEvent = nullptr;
@@ -1181,6 +1184,12 @@ struct GLState
 static GLState g_gl;
 static std::unordered_map<HWND, QD3D12Window> g_windows;
 QD3D12Window* g_currentWindow = nullptr;
+
+// Optional D3D12 mesh shader path (DispatchMesh). SRV for raw vertex bytes uses a high register to avoid texture conflicts.
+static constexpr UINT QD3D12_MeshVertexBufferSrvRegister = 4096u;
+static bool g_meshShaderRuntimeOk = false;
+static ComPtr<ID3DBlob> g_msMainBlob;
+static std::unordered_map<uint64_t, ComPtr<ID3D12PipelineState>> g_meshPsoCache;
 
 static std::unordered_map<uint32_t, uint32_t> g_qd3d12RaytracingMeshMaterialFlags;
 
@@ -1981,6 +1990,11 @@ cbuffer DrawCB : register(b0)
     float4 gTexEnvColor1;
 };
 
+cbuffer MeshRootCB : register(b1)
+{
+    uint gMeshVertexCount;
+};
+
 #define gUseNormalMap       gMotionPad.x
 #define gNormalMapStrength  gMotionPad.y
 #define gNormalMapYSign     gMotionPad.z
@@ -1989,6 +2003,7 @@ cbuffer DrawCB : register(b0)
 Texture2D gTex0 : register(t0);
 Texture2D gTex1 : register(t1);
 Texture2D gNormalMap : register(t2);
+ByteAddressBuffer gMeshVB : register(t4096);
 SamplerState gSamp0 : register(s0);
 SamplerState gSamp1 : register(s1);
 SamplerState gSamp2 : register(s2);
@@ -2340,10 +2355,23 @@ float4 BuildVelocity(VSOut i)
     return float4(prevUv - currUv, prevDepth - currDepth, gMaterialType);
 }
 
-VSOut VSMain(VSIn i)
+static VSIn QD3D12_LoadMeshVertex(uint vid)
+{
+    VSIn o;
+    const uint base = vid * 80u;
+    o.pos = gMeshVB.Load<float3>(base + 0u);
+    o.normal = gMeshVB.Load<float3>(base + 12u);
+    o.uv0 = gMeshVB.Load<float2>(base + 24u);
+    o.uv1 = gMeshVB.Load<float2>(base + 32u);
+    o.col = gMeshVB.Load<float4>(base + 40u);
+    o.tangent = gMeshVB.Load<float3>(base + 56u);
+    o.binormal = gMeshVB.Load<float3>(base + 68u);
+    return o;
+}
+
+VSOut QD3D12_BuildVSOutFromVertex(VSIn i)
 {
     VSOut o;
-
     float4 worldPos = mul(gModelMatrix, float4(i.pos, 1.0));
     float4 currClip = mul(gMVP, float4(i.pos, 1.0));
     float4 prevClip = mul(gPrevMVP, float4(i.pos, 1.0));
@@ -2367,6 +2395,35 @@ VSOut VSMain(VSIn i)
     o.attr = float4(geometryFlag, gRoughness, gMaterialType, 0.0);
     o.psize = gPointSize;
     return o;
+}
+
+[numthreads(256, 1, 1)]
+void MSMain(
+    uint3 gtid : SV_GroupThreadID,
+    out vertices VSOut verts[256],
+    out indices uint3 tris[85])
+{
+    const uint n = min(gMeshVertexCount, 256u);
+    const uint triCount = n / 3u;
+
+    SetMeshOutputCounts(n, triCount);
+
+    if (gtid.x < n)
+    {
+        VSIn vin = QD3D12_LoadMeshVertex(gtid.x);
+        verts[gtid.x] = QD3D12_BuildVSOutFromVertex(vin);
+    }
+
+    if (gtid.x < triCount)
+    {
+        const uint i0 = gtid.x * 3u;
+        tris[gtid.x] = uint3(i0, i0 + 1u, i0 + 2u);
+    }
+}
+
+VSOut VSMain(VSIn i)
+{
+    return QD3D12_BuildVSOutFromVertex(i);
 }
 
 PSOut PSMain(VSOut i)
@@ -3388,6 +3445,15 @@ static void ApplyRasterDepthStencilState(D3D12_GRAPHICS_PIPELINE_STATE_DESC& d, 
 	d.DepthStencilState.StencilWriteMask = key.stencilWriteMask;
 	d.DepthStencilState.FrontFace = BuildStencilFaceDesc(key.stencilFrontFunc, key.stencilFrontSFail, key.stencilFrontDPFail, key.stencilFrontDPPass);
 	d.DepthStencilState.BackFace = BuildStencilFaceDesc(key.stencilBackFunc, key.stencilBackSFail, key.stencilBackDPFail, key.stencilBackDPPass);
+}
+
+static bool QD3D12_MeshRasterPathAvailable()
+{
+	return g_meshShaderRuntimeOk &&
+		g_msMainBlob &&
+		g_gl.cmdList6 &&
+		QIceBridge_GetActiveRHI() == QICEBRIDGE_RHI_D3D12 &&
+		IceBridge_GetD3D12RasterKind() == QICEBRIDGE_D3D12_RASTER_MESH;
 }
 
 static D3D12_CULL_MODE MapCull(GLenum m)
@@ -4537,6 +4603,19 @@ static void QD3D12_CreateDevice()
 	QD3D12_CHECK(QD3D12_D3D12CreateDeviceForStreamline(nullptr, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&g_gl.device)));
 	QD3D12_SelectGBufferSampleCount();
 
+	D3D12_FEATURE_DATA_SHADER_MODEL sm{};
+	sm.HighestShaderModel = D3D_SHADER_MODEL_6_6;
+	if (SUCCEEDED(g_gl.device->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &sm, sizeof(sm))) &&
+		sm.HighestShaderModel >= D3D_SHADER_MODEL_6_6)
+	{
+		D3D12_FEATURE_DATA_D3D12_OPTIONS7 opt7{};
+		if (SUCCEEDED(g_gl.device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, &opt7, sizeof(opt7))) &&
+			opt7.MeshShaderTier > D3D12_MESH_SHADER_TIER_NOT_SUPPORTED)
+		{
+			g_meshShaderRuntimeOk = true;
+		}
+	}
+
 	D3D12_COMMAND_QUEUE_DESC qd{};
 	qd.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 	QD3D12_CHECK(g_gl.device->CreateCommandQueue(&qd, IID_PPV_ARGS(&g_gl.queue)));
@@ -4987,6 +5066,9 @@ static D3D12_GPU_DESCRIPTOR_HANDLE QD3D12_SrvGpu(UINT index)
 static void QD3D12_CreateCommandObjects()
 {
 	QD3D12_CHECK(g_gl.device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, g_currentWindow->frames[0].cmdAlloc.Get(), nullptr, IID_PPV_ARGS(&g_gl.cmdList)));
+	g_gl.cmdList6.Reset();
+	if (FAILED(g_gl.cmdList.As(&g_gl.cmdList6)) || !g_gl.cmdList6)
+		g_meshShaderRuntimeOk = false;
 	QD3D12_CHECK(g_gl.cmdList->Close());
 
 	QD3D12_CHECK(g_gl.device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&g_gl.fence)));
@@ -5048,7 +5130,7 @@ static void QD3D12_DestroyUploadRingForWindow(QD3D12Window& w)
 	w.upload.offset = 0;
 }
 
-static ComPtr<ID3DBlob> CompileShaderSourceVariant(const char* source, const char* entry, const char* target)
+static ComPtr<ID3DBlob> CompileShaderSourceVariant(const char* source, const char* entry, const char* target, bool fatalOnError = true)
 {
 	ComPtr<IDxcUtils> utils;
 	ComPtr<IDxcCompiler3> compiler;
@@ -5129,10 +5211,16 @@ static ComPtr<ID3DBlob> CompileShaderSourceVariant(const char* source, const cha
 
 	if (FAILED(hr))
 	{
-		QD3D12_Fatal("DXC compile call failed for %s (target %s), hr=0x%08X",
-			entry ? entry : "unknown",
-			target ? target : "unknown",
-			(unsigned)hr);
+		if (fatalOnError)
+			QD3D12_Fatal("DXC compile call failed for %s (target %s), hr=0x%08X",
+				entry ? entry : "unknown",
+				target ? target : "unknown",
+				(unsigned)hr);
+		else
+			QD3D12_Log("DXC compile call failed for %s (target %s), hr=0x%08X",
+				entry ? entry : "unknown",
+				target ? target : "unknown",
+				(unsigned)hr);
 		return nullptr;
 	}
 
@@ -5149,9 +5237,14 @@ static ComPtr<ID3DBlob> CompileShaderSourceVariant(const char* source, const cha
 	result->GetStatus(&status);
 	if (FAILED(status))
 	{
-		QD3D12_Fatal("Shader compile failed for %s: %s",
-			entry,
-			(errors && errors->GetStringLength() > 0) ? errors->GetStringPointer() : "unknown");
+		if (fatalOnError)
+			QD3D12_Fatal("Shader compile failed for %s: %s",
+				entry,
+				(errors && errors->GetStringLength() > 0) ? errors->GetStringPointer() : "unknown");
+		else
+			QD3D12_Log("Shader compile failed for %s: %s",
+				entry,
+				(errors && errors->GetStringLength() > 0) ? errors->GetStringPointer() : "unknown");
 		return nullptr;
 	}
 
@@ -5159,7 +5252,10 @@ static ComPtr<ID3DBlob> CompileShaderSourceVariant(const char* source, const cha
 	result->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&dxil), nullptr);
 	if (!dxil)
 	{
-		QD3D12_Fatal("DXC returned no object for %s", entry);
+		if (fatalOnError)
+			QD3D12_Fatal("DXC returned no object for %s", entry);
+		else
+			QD3D12_Log("DXC returned no object for %s", entry);
 		return nullptr;
 	}
 
@@ -5170,7 +5266,7 @@ static ComPtr<ID3DBlob> CompileShaderSourceVariant(const char* source, const cha
 
 static ComPtr<ID3DBlob> CompileShaderVariant(const char* entry, const char* target)
 {
-	return CompileShaderSourceVariant(kQuakeWrapperHLSL, entry, target);
+	return CompileShaderSourceVariant(kQuakeWrapperHLSL, entry, target, true);
 }
 
 static void QD3D12_CreatePostRootSignature()
@@ -5220,12 +5316,25 @@ static void QD3D12_CreatePostRootSignature()
 static void QD3D12_CreateRootSignature()
 {
 	D3D12_DESCRIPTOR_RANGE ranges[QD3D12_MaxTextureUnits] = {};
-	D3D12_ROOT_PARAMETER params[1 + QD3D12_MaxTextureUnits] = {};
+
+	D3D12_ROOT_PARAMETER params[3 + QD3D12_MaxTextureUnits] = {};
 
 	params[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
 	params[0].Descriptor.ShaderRegister = 0;
 	params[0].Descriptor.RegisterSpace = 0;
 	params[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+	// Mesh path: raw vertex bytes (ByteAddressBuffer) bound as a root SRV at t4096.
+	params[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV;
+	params[1].Descriptor.ShaderRegister = QD3D12_MeshVertexBufferSrvRegister;
+	params[1].Descriptor.RegisterSpace = 0;
+	params[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_MESH;
+
+	params[2].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+	params[2].Constants.ShaderRegister = 1;
+	params[2].Constants.RegisterSpace = 0;
+	params[2].Constants.Num32BitValues = 1;
+	params[2].ShaderVisibility = D3D12_SHADER_VISIBILITY_MESH;
 
 	for (UINT i = 0; i < QD3D12_MaxTextureUnits; ++i)
 	{
@@ -5235,10 +5344,10 @@ static void QD3D12_CreateRootSignature()
 		ranges[i].RegisterSpace = 0;
 		ranges[i].OffsetInDescriptorsFromTableStart = 0;
 
-		params[1 + i].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-		params[1 + i].DescriptorTable.NumDescriptorRanges = 1;
-		params[1 + i].DescriptorTable.pDescriptorRanges = &ranges[i];
-		params[1 + i].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		params[3 + i].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+		params[3 + i].DescriptorTable.NumDescriptorRanges = 1;
+		params[3 + i].DescriptorTable.pDescriptorRanges = &ranges[i];
+		params[3 + i].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 	}
 
 	D3D12_STATIC_SAMPLER_DESC samps[QD3D12_MaxTextureUnits] = {};
@@ -5250,7 +5359,7 @@ static void QD3D12_CreateRootSignature()
 		samps[i].AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 		samps[i].ShaderRegister = i;
 		samps[i].RegisterSpace = 0;
-		samps[i].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+		samps[i].ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 		samps[i].MaxLOD = D3D12_FLOAT32_MAX;
 	}
 
@@ -5272,6 +5381,15 @@ static void QD3D12_CreateRootSignature()
 static void QD3D12_CompileShaders()
 {
 	g_gl.vsMainBlob = CompileShaderVariant("VSMain", "vs_6_0");
+	if (g_meshShaderRuntimeOk)
+	{
+		g_msMainBlob = CompileShaderSourceVariant(kQuakeWrapperHLSL, "MSMain", "ms_6_6", false);
+		if (!g_msMainBlob)
+		{
+			g_meshShaderRuntimeOk = false;
+			QD3D12_Log("Mesh shader compile failed; mesh raster path disabled for this session.");
+		}
+	}
 	g_gl.psMainBlob = CompileShaderVariant("PSMain", "ps_6_0");
 	g_gl.psAlphaBlob = CompileShaderVariant("PSMainAlphaTest", "ps_6_0");
 	g_gl.psUntexturedBlob = CompileShaderVariant("PSMainUntextured", "ps_6_0");
@@ -5324,22 +5442,13 @@ static D3D12_CPU_DESCRIPTOR_HANDLE CurrentNormalRTV()
 	return QD3D12_RtvAt(w, QD3D12_RTV_NORMAL_RENDER, w.frameIndex);
 }
 
-static D3D12_GRAPHICS_PIPELINE_STATE_DESC BuildPSODesc(
+static void QD3D12_FillRasterBlendState(
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC& d,
 	PipelineMode mode,
-	ID3DBlob* vs,
-	ID3DBlob* ps,
 	const BatchKey& key,
 	D3D12_PRIMITIVE_TOPOLOGY_TYPE topoType,
 	bool nativeColorOnly)
 {
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC d{};
-	d.pRootSignature = g_gl.rootSig.Get();
-	d.VS = { vs->GetBufferPointer(), vs->GetBufferSize() };
-	d.PS = { ps->GetBufferPointer(), ps->GetBufferSize() };
-
-	d.InputLayout.pInputElementDescs = kGLVertexInputLayout;
-	d.InputLayout.NumElements = _countof(kGLVertexInputLayout);
-
 	d.PrimitiveTopologyType = topoType;
 
 	d.NumRenderTargets = nativeColorOnly ? 1u : 4u;
@@ -5395,21 +5504,79 @@ static D3D12_GRAPHICS_PIPELINE_STATE_DESC BuildPSODesc(
 		rt.SrcBlendAlpha = MapBlendAlpha(key.blendSrc);
 		rt.DestBlendAlpha = MapBlendAlpha(key.blendDst);
 		rt.BlendOpAlpha = D3D12_BLEND_OP_ADD;
-
-		//if (!nativeColorOnly)
-		//{
-		//	// Transparent passes happen after glLightScene in the RTCW path, so they
-		//	// must not scribble over the opaque G-buffer or motion vectors that the
-		//	// raytracing and upscaling passes depend on.
-		//	d.BlendState.RenderTarget[1].RenderTargetWriteMask = 0;
-		//	d.BlendState.RenderTarget[2].RenderTargetWriteMask = 0;
-		//	d.BlendState.RenderTarget[3].RenderTargetWriteMask = 0;
-		//}
 	}
 
 	ApplyRasterDepthStencilState(d, key);
+}
+
+static D3D12_GRAPHICS_PIPELINE_STATE_DESC BuildPSODesc(
+	PipelineMode mode,
+	ID3DBlob* vs,
+	ID3DBlob* ps,
+	const BatchKey& key,
+	D3D12_PRIMITIVE_TOPOLOGY_TYPE topoType,
+	bool nativeColorOnly)
+{
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC d{};
+	d.pRootSignature = g_gl.rootSig.Get();
+	d.VS = { vs->GetBufferPointer(), vs->GetBufferSize() };
+	d.PS = { ps->GetBufferPointer(), ps->GetBufferSize() };
+
+	d.InputLayout.pInputElementDescs = kGLVertexInputLayout;
+	d.InputLayout.NumElements = _countof(kGLVertexInputLayout);
+
+	QD3D12_FillRasterBlendState(d, mode, key, topoType, nativeColorOnly);
 
 	return d;
+}
+
+static ComPtr<ID3D12PipelineState> QD3D12_CreateMeshRasterPSO(
+	PipelineMode mode,
+	ID3DBlob* ms,
+	ID3DBlob* ps,
+	const BatchKey& key,
+	D3D12_PRIMITIVE_TOPOLOGY_TYPE topoType,
+	bool nativeColorOnly)
+{
+	if (!g_gl.device || !ms || !ps)
+		return nullptr;
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC gd{};
+	gd.pRootSignature = g_gl.rootSig.Get();
+	QD3D12_FillRasterBlendState(gd, mode, key, topoType, nativeColorOnly);
+
+	D3DX12_MESH_SHADER_PIPELINE_STATE_DESC meshDesc{};
+	meshDesc.pRootSignature = gd.pRootSignature;
+	meshDesc.AS = {};
+	meshDesc.MS = { ms->GetBufferPointer(), ms->GetBufferSize() };
+	meshDesc.PS = { ps->GetBufferPointer(), ps->GetBufferSize() };
+	meshDesc.BlendState = gd.BlendState;
+	meshDesc.SampleMask = gd.SampleMask;
+	meshDesc.RasterizerState = gd.RasterizerState;
+	meshDesc.DepthStencilState = gd.DepthStencilState;
+	meshDesc.PrimitiveTopologyType = gd.PrimitiveTopologyType;
+	meshDesc.NumRenderTargets = gd.NumRenderTargets;
+	memcpy(meshDesc.RTVFormats, gd.RTVFormats, sizeof(meshDesc.RTVFormats));
+	meshDesc.DSVFormat = gd.DSVFormat;
+	meshDesc.SampleDesc = gd.SampleDesc;
+	meshDesc.NodeMask = gd.NodeMask;
+	meshDesc.CachedPSO = gd.CachedPSO;
+	meshDesc.Flags = gd.Flags;
+
+	CD3DX12_PIPELINE_STATE_STREAM2 stream(meshDesc);
+
+	D3D12_PIPELINE_STATE_STREAM_DESC streamDesc{};
+	streamDesc.SizeInBytes = sizeof(stream);
+	streamDesc.pPipelineStateSubobjectStream = &stream;
+
+	ComPtr<ID3D12Device2> dev2;
+	if (FAILED(g_gl.device.As(&dev2)) || !dev2)
+		return nullptr;
+
+	ComPtr<ID3D12PipelineState> pso;
+	if (FAILED(dev2->CreatePipelineState(&streamDesc, IID_PPV_ARGS(&pso))))
+		return nullptr;
+	return pso;
 }
 
 static void QD3D12_CreatePSOs()
@@ -5509,7 +5676,8 @@ static void QD3D12_CreatePSOs()
 static uint64_t MakePSOKey(
 	const BatchKey& key,
 	D3D12_PRIMITIVE_TOPOLOGY_TYPE topoType,
-	bool nativeColorOnly)
+	bool nativeColorOnly,
+	uint64_t pathTag)
 {
 	uint64_t h = 1469598103934665603ull;
 	auto mix = [&](uint64_t v)
@@ -5518,6 +5686,7 @@ static uint64_t MakePSOKey(
 			h *= 1099511628211ull;
 		};
 
+	mix(pathTag);
 	mix(uint32_t(key.pipeline));
 	mix(uint32_t(key.blendSrc));
 	mix(uint32_t(key.blendDst));
@@ -5552,7 +5721,7 @@ static ID3D12PipelineState* QD3D12_GetPSO(
 	D3D12_PRIMITIVE_TOPOLOGY_TYPE topoType,
 	bool nativeColorOnly)
 {
-	const uint64_t psoKey = MakePSOKey(key, topoType, nativeColorOnly);
+	const uint64_t psoKey = MakePSOKey(key, topoType, nativeColorOnly, 0ull);
 
 	auto it = g_psoCache.find(psoKey);
 	if (it != g_psoCache.end())
@@ -5588,6 +5757,52 @@ static ID3D12PipelineState* QD3D12_GetPSO(
 
 	ID3D12PipelineState* out = newPSO.Get();
 	g_psoCache.emplace(psoKey, std::move(newPSO));
+	return out;
+}
+
+static ID3D12PipelineState* QD3D12_GetMeshPSO(
+	const BatchKey& key,
+	D3D12_PRIMITIVE_TOPOLOGY_TYPE topoType,
+	bool nativeColorOnly)
+{
+	if (!g_msMainBlob)
+		return nullptr;
+
+	const uint64_t psoKey = MakePSOKey(key, topoType, nativeColorOnly, 1ull);
+
+	auto it = g_meshPsoCache.find(psoKey);
+	if (it != g_meshPsoCache.end())
+		return it->second.Get();
+
+	ID3DBlob* psBlob = nullptr;
+	switch (key.pipeline)
+	{
+	case PIPE_ALPHA_TEST_TEX:
+		psBlob = nativeColorOnly ? g_gl.psAlphaColorOnlyBlob.Get() : g_gl.psAlphaBlob.Get();
+		break;
+	case PIPE_OPAQUE_UNTEX:
+	case PIPE_BLEND_UNTEX:
+		psBlob = nativeColorOnly ? g_gl.psUntexturedColorOnlyBlob.Get() : g_gl.psUntexturedBlob.Get();
+		break;
+	case PIPE_OPAQUE_TEX:
+	case PIPE_BLEND_TEX:
+	default:
+		psBlob = nativeColorOnly ? g_gl.psMainColorOnlyBlob.Get() : g_gl.psMainBlob.Get();
+		break;
+	}
+
+	ComPtr<ID3D12PipelineState> newPSO = QD3D12_CreateMeshRasterPSO(
+		key.pipeline,
+		g_msMainBlob.Get(),
+		psBlob,
+		key,
+		topoType,
+		nativeColorOnly);
+	if (!newPSO)
+		return nullptr;
+
+	ID3D12PipelineState* out = newPSO.Get();
+	g_meshPsoCache.emplace(psoKey, std::move(newPSO));
 	return out;
 }
 
@@ -5954,6 +6169,8 @@ void QD3D12_ShutdownForQuake()
 
 	QD3D12ARB_Shutdown();
 	QD3D12_ResetAutoCameraHistory();
+	g_psoCache.clear();
+	g_meshPsoCache.clear();
 	g_arbPsoCache.clear();
 	g_qd3d12RaytracingMeshMaterialFlags.clear();
 
@@ -7613,11 +7830,25 @@ static void QD3D12_FlushQueuedBatches()
 			dc->PointSize = 1.0f;
 		}
 
+		const bool useMeshRaster =
+			!batch.key.useARBPrograms &&
+			QD3D12_MeshRasterPathAvailable() &&
+			topoType == D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE &&
+			batch.key.topology == D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST &&
+			(count % 3) == 0 &&
+			count <= 256;
+
 		if (batch.key.useARBPrograms)
 		{
 			pso = QD3D12_GetARBPSO(batch.key, topoType, nativeColorOnly);
 			if (!pso)
 				continue;
+		}
+		else if (useMeshRaster)
+		{
+			pso = QD3D12_GetMeshPSO(batch.key, topoType, nativeColorOnly);
+			if (!pso)
+				pso = QD3D12_GetPSO(batch.key, topoType, nativeColorOnly);
 		}
 		else
 		{
@@ -7638,7 +7869,7 @@ static void QD3D12_FlushQueuedBatches()
 				if (srvIndex == UINT_MAX)
 					srvIndex = g_gl.whiteTexture.srvIndex;
 
-				g_gl.cmdList->SetGraphicsRootDescriptorTable(1 + unit, QD3D12_SrvGpu(srvIndex));
+				g_gl.cmdList->SetGraphicsRootDescriptorTable(3 + unit, QD3D12_SrvGpu(srvIndex));
 			}
 
 			haveLastTex0 = false;
@@ -7657,14 +7888,14 @@ static void QD3D12_FlushQueuedBatches()
 				{
 					tex0Gpu = QD3D12_SrvGpu(g_gl.whiteTexture.srvIndex);
 				}
-				g_gl.cmdList->SetGraphicsRootDescriptorTable(1, tex0Gpu);
+				g_gl.cmdList->SetGraphicsRootDescriptorTable(3, tex0Gpu);
 				lastTex0 = tex0Gpu;
 				haveLastTex0 = true;
 			}
 
 			if (!haveLastTex1 || tex1Gpu.ptr != lastTex1.ptr)
 			{
-				g_gl.cmdList->SetGraphicsRootDescriptorTable(2, tex1Gpu);
+				g_gl.cmdList->SetGraphicsRootDescriptorTable(4, tex1Gpu);
 				lastTex1 = tex1Gpu;
 				haveLastTex1 = true;
 			}
@@ -7676,13 +7907,19 @@ static void QD3D12_FlushQueuedBatches()
 			D3D12_GPU_DESCRIPTOR_HANDLE normalMapGpu = QD3D12_SrvGpu(normalSrvIndex);
 			if (!haveLastNormalMap || normalMapGpu.ptr != lastNormalMap.ptr)
 			{
-				g_gl.cmdList->SetGraphicsRootDescriptorTable(3, normalMapGpu);
+				g_gl.cmdList->SetGraphicsRootDescriptorTable(5, normalMapGpu);
 				lastNormalMap = normalMapGpu;
 				haveLastNormalMap = true;
 			}
 		}
 
 		g_gl.cmdList->SetGraphicsRootConstantBufferView(0, cbAlloc.gpu);
+		if (useMeshRaster)
+		{
+			const UINT meshVertCount = (UINT)count;
+			g_gl.cmdList->SetGraphicsRootShaderResourceView(1, vbAlloc.gpu);
+			g_gl.cmdList->SetGraphicsRoot32BitConstant(2, meshVertCount, 0);
+		}
 		g_gl.cmdList->OMSetStencilRef(batch.key.stencilRef);
 
 		if (batch.key.topology != lastTopo)
@@ -7691,8 +7928,15 @@ static void QD3D12_FlushQueuedBatches()
 			lastTopo = batch.key.topology;
 		}
 
-		g_gl.cmdList->IASetVertexBuffers(0, 1, &vbv);
-		g_gl.cmdList->DrawInstanced((UINT)count, 1, 0, 0);
+		if (useMeshRaster)
+		{
+			g_gl.cmdList6->DispatchMesh(1, 1, 1);
+		}
+		else
+		{
+			g_gl.cmdList->IASetVertexBuffers(0, 1, &vbv);
+			g_gl.cmdList->DrawInstanced((UINT)count, 1, 0, 0);
+		}
 	}
 
 	g_gl.queuedBatches.clear();
@@ -9395,6 +9639,7 @@ void QD3D12_Resize()
 	QD3D12_CreateRTVsForWindow(*g_currentWindow);
 	QD3D12_CreateDSVForWindow(*g_currentWindow);
 	g_psoCache.clear();
+	g_meshPsoCache.clear();
 	g_arbPsoCache.clear();
 	g_gl.framePhase = QD3D12_FRAME_LOW_RES;
 	g_gl.sceneResolvedThisFrame = false;
@@ -9445,6 +9690,7 @@ static void QD3D12_ReconfigureCurrentWindowForUpscalerChange()
 	QD3D12_CreateRTVsForWindow(*g_currentWindow);
 	QD3D12_CreateDSVForWindow(*g_currentWindow);
 	g_psoCache.clear();
+	g_meshPsoCache.clear();
 	g_arbPsoCache.clear();
 	g_gl.framePhase = QD3D12_FRAME_LOW_RES;
 	g_gl.sceneResolvedThisFrame = false;

@@ -90,6 +90,11 @@
   <ItemGroup>
     <ClInclude Include="gl_d3d12arb.h" />
     <ClInclude Include="icebridge_rhi.h" />
+    <ClInclude Include="third_party\directx\d3dx12.h" />
+    <ClInclude Include="third_party\directx\d3dx12_core.h" />
+    <ClInclude Include="third_party\directx\d3dx12_default.h" />
+    <ClInclude Include="third_party\directx\d3dx12_pipeline_state_stream.h" />
+    <ClInclude Include="third_party\directx\d3dx12_root_signature.h" />
     <ClInclude Include="opengl.h" />
     <ClInclude Include="tess\dict-list.h" />
     <ClInclude Include="tess\dict.h" />
