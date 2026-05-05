@@ -131,8 +131,168 @@ byte *R_Dropsample( const byte *in, int inwidth, int inheight,
 
 /*
 ===============
-R_SetBorderTexels
+R_SetBorderTexelsFloat
+===============
+*/
+void R_SetBorderTexelsFloat( float *inBase, int width, int height, const float border[4] ) {
+	int		i;
+	float	*out;
 
+	out = inBase;
+	for ( i = 0; i < height; i++, out += width * 4 ) {
+		out[0] = border[0];
+		out[1] = border[1];
+		out[2] = border[2];
+		out[3] = border[3];
+	}
+	out = inBase + ( width - 1 ) * 4;
+	for ( i = 0; i < height; i++, out += width * 4 ) {
+		out[0] = border[0];
+		out[1] = border[1];
+		out[2] = border[2];
+		out[3] = border[3];
+	}
+	out = inBase;
+	for ( i = 0; i < width; i++, out += 4 ) {
+		out[0] = border[0];
+		out[1] = border[1];
+		out[2] = border[2];
+		out[3] = border[3];
+	}
+	out = inBase + width * 4 * ( height - 1 );
+	for ( i = 0; i < width; i++, out += 4 ) {
+		out[0] = border[0];
+		out[1] = border[1];
+		out[2] = border[2];
+		out[3] = border[3];
+	}
+}
+
+/*
+================
+R_ResampleTextureFloat
+================
+*/
+byte *R_ResampleTextureFloat( const float *in, int inwidth, int inheight, int outwidth, int outheight ) {
+	int		i, j;
+	const float	*inrow, *inrow2;
+	unsigned int	frac, fracstep;
+	unsigned int	p1[MAX_DIMENSION], p2[MAX_DIMENSION];
+	const float		*pix1, *pix2, *pix3, *pix4;
+	float		*out, *out_p;
+
+	if ( outwidth > MAX_DIMENSION ) {
+		outwidth = MAX_DIMENSION;
+	}
+	if ( outheight > MAX_DIMENSION ) {
+		outheight = MAX_DIMENSION;
+	}
+
+	out = (float *)R_StaticAlloc( outwidth * outheight * 4 * sizeof( float ) );
+	out_p = out;
+
+	fracstep = inwidth * 0x10000 / outwidth;
+
+	frac = fracstep >> 2;
+	for ( i = 0; i < outwidth; i++ ) {
+		p1[i] = 4 * ( frac >> 16 );
+		frac += fracstep;
+	}
+	frac = 3 * ( fracstep >> 2 );
+	for ( i = 0; i < outwidth; i++ ) {
+		p2[i] = 4 * ( frac >> 16 );
+		frac += fracstep;
+	}
+
+	for ( i = 0; i < outheight; i++, out_p += outwidth * 4 ) {
+		inrow = in + 4 * inwidth * (int)( ( i + 0.25f ) * inheight / outheight );
+		inrow2 = in + 4 * inwidth * (int)( ( i + 0.75f ) * inheight / outheight );
+		frac = fracstep >> 1;
+		for ( j = 0; j < outwidth; j++ ) {
+			pix1 = inrow + p1[j];
+			pix2 = inrow + p2[j];
+			pix3 = inrow2 + p1[j];
+			pix4 = inrow2 + p2[j];
+			out_p[j * 4 + 0] = 0.25f * ( pix1[0] + pix2[0] + pix3[0] + pix4[0] );
+			out_p[j * 4 + 1] = 0.25f * ( pix1[1] + pix2[1] + pix3[1] + pix4[1] );
+			out_p[j * 4 + 2] = 0.25f * ( pix1[2] + pix2[2] + pix3[2] + pix4[2] );
+			out_p[j * 4 + 3] = 0.25f * ( pix1[3] + pix2[3] + pix3[3] + pix4[3] );
+		}
+	}
+
+	return (byte *)out;
+}
+
+/*
+================
+R_MipMapFloat
+================
+*/
+float *R_MipMapFloat( const float *in, int width, int height, bool preserveBorder ) {
+	int		i, j;
+	const float	*in_p;
+	float	*out, *out_p;
+	int		row;
+	float	border[4];
+
+	if ( width < 1 || height < 1 || ( width + height == 2 ) ) {
+		common->FatalError( "R_MipMapFloat called with size %i,%i", width, height );
+	}
+
+	border[0] = in[0];
+	border[1] = in[1];
+	border[2] = in[2];
+	border[3] = in[3];
+
+	row = width * 4;
+
+	out = (float *)R_StaticAlloc( ( width >> 1 ) * ( height >> 1 ) * 4 * sizeof( float ) );
+	out_p = out;
+
+	in_p = in;
+
+	width >>= 1;
+	height >>= 1;
+
+	if ( width == 0 || height == 0 ) {
+		width += height;
+		if ( preserveBorder ) {
+			for ( i = 0; i < width; i++, out_p += 4 ) {
+				out_p[0] = border[0];
+				out_p[1] = border[1];
+				out_p[2] = border[2];
+				out_p[3] = border[3];
+			}
+		} else {
+			for ( i = 0; i < width; i++, out_p += 4, in_p += 8 ) {
+				out_p[0] = 0.5f * ( in_p[0] + in_p[4] );
+				out_p[1] = 0.5f * ( in_p[1] + in_p[5] );
+				out_p[2] = 0.5f * ( in_p[2] + in_p[6] );
+				out_p[3] = 0.5f * ( in_p[3] + in_p[7] );
+			}
+		}
+		return out;
+	}
+
+	for ( i = 0; i < height; i++, in_p += row ) {
+		for ( j = 0; j < width; j++, out_p += 4, in_p += 8 ) {
+			out_p[0] = 0.25f * ( in_p[0] + in_p[4] + in_p[row + 0] + in_p[row + 4] );
+			out_p[1] = 0.25f * ( in_p[1] + in_p[5] + in_p[row + 1] + in_p[row + 5] );
+			out_p[2] = 0.25f * ( in_p[2] + in_p[6] + in_p[row + 2] + in_p[row + 6] );
+			out_p[3] = 0.25f * ( in_p[3] + in_p[7] + in_p[row + 3] + in_p[row + 7] );
+		}
+	}
+
+	if ( preserveBorder ) {
+		R_SetBorderTexelsFloat( out, width, height, border );
+	}
+
+	return out;
+}
+
+/*
+===============
+R_SetBorderTexels
 ===============
 */
 void R_SetBorderTexels( byte *inBase, int width, int height, const byte border[4] ) {

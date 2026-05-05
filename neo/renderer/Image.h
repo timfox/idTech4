@@ -124,7 +124,8 @@ typedef enum {
 	TD_DIFFUSE,				// may be compressed
 	TD_DEFAULT,				// will use compressed formats when possible
 	TD_BUMP,				// may be compressed with 8 bit lookup
-	TD_HIGH_QUALITY			// either 32 bit or a component format, no loss at all
+	TD_HIGH_QUALITY,		// either 32 bit or a component format, no loss at all
+	TD_HDR_FLOAT			// RGBA32F (OpenEXR path); linear HDR, no DXT compression
 } textureDepth_t;
 
 typedef enum {
@@ -461,6 +462,9 @@ byte *R_ResampleTexture( const byte *in, int inwidth, int inheight,
 							int outwidth, int outheight );
 byte *R_MipMapWithAlphaSpecularity( const byte *in, int width, int height );
 byte *R_MipMap( const byte *in, int width, int height, bool preserveBorder );
+float *R_MipMapFloat( const float *in, int width, int height, bool preserveBorder );
+byte *R_ResampleTextureFloat( const float *in, int inwidth, int inheight, int outwidth, int outheight );
+void R_SetBorderTexelsFloat( float *inBase, int width, int height, const float border[4] );
 byte *R_MipMap3D( const byte *in, int width, int height, int depth, bool preserveBorder );
 
 // these operate in-place on the provided pixels
@@ -479,7 +483,7 @@ IMAGEFILES
 ====================================================================
 */
 
-void R_LoadImage( const char *name, byte **pic, int *width, int *height, ID_TIME_T *timestamp, bool makePowerOf2 );
+void R_LoadImage( const char *name, byte **pic, int *width, int *height, ID_TIME_T *timestamp, bool makePowerOf2, textureDepth_t *outDepth = NULL );
 // pic is in top to bottom raster format
 bool R_LoadCubeImages( const char *cname, cubeFiles_t extensions, byte *pic[6], int *size, ID_TIME_T *timestamp );
 

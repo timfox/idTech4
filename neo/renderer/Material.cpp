@@ -992,6 +992,10 @@ void idMaterial::ParseFragmentMap( idLexer &src, newShaderStage_t *newStage ) {
 			td = TD_HIGH_QUALITY;
 			continue;
 		}
+		if ( !token.Icmp( "hdrfloat" ) || !token.Icmp( "hdr" ) ) {
+			td = TD_HDR_FLOAT;
+			continue;
+		}
 
 		if ( !token.Icmp( "uncompressed" ) || !token.Icmp( "highquality" ) ) {
 			if ( !globalImages->image_ignoreHighQuality.GetInteger() ) {
@@ -1258,6 +1262,10 @@ void idMaterial::ParseStage( idLexer &src, const textureRepeat_t trpDefault ) {
 		}
 		if ( !token.Icmp( "forceHighQuality" ) ) {
 			td = TD_HIGH_QUALITY;
+			continue;
+		}
+		if ( !token.Icmp( "hdrfloat" ) || !token.Icmp( "hdr" ) ) {
+			td = TD_HDR_FLOAT;
 			continue;
 		}
 		if ( !token.Icmp( "nopicmip" ) ) {

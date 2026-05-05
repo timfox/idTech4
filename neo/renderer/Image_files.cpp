@@ -31,12 +31,13 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "tr_local.h"
 #include "R_SvgLoad.h"
+#include "R_LoadEXR.h"
 
 /*
 
 This file only has a single entry point:
 
-void R_LoadImage( const char *name, byte **pic, int *width, int *height, bool makePowerOf2 );
+void R_LoadImage( const char *name, byte **pic, int *width, int *height, ID_TIME_T *timestamp, bool makePowerOf2, textureDepth_t *outDepth );
 
 */
 
@@ -47,6 +48,15 @@ LoadSVG
 */
 static void LoadSVG( const char *name, byte **pic, int *width, int *height, ID_TIME_T *timestamp ) {
 	R_LoadSVG( name, pic, width, height, timestamp );
+}
+
+/*
+================
+LoadEXR
+================
+*/
+static void LoadEXR( const char *name, byte **pic, int *width, int *height, ID_TIME_T *timestamp ) {
+	R_LoadEXR( name, pic, width, height, timestamp );
 }
 
 /*
@@ -173,6 +183,7 @@ void R_WritePalTGA( const char *filename, const byte *data, const byte *palette,
 static void LoadBMP( const char *name, byte **pic, int *width, int *height, ID_TIME_T *timestamp );
 static void LoadTGA( const char *name, byte **pic, int *width, int *height, ID_TIME_T *timestamp );
 static void LoadJPG( const char *name, byte **pic, int *width, int *height, ID_TIME_T *timestamp );
+static void LoadEXR( const char *name, byte **pic, int *width, int *height, ID_TIME_T *timestamp );
 
 
 /*
@@ -1005,7 +1016,7 @@ If pic is NULL, the image won't actually be loaded, it will just find the
 timestamp.
 =================
 */
-void R_LoadImage( const char *cname, byte **pic, int *width, int *height, ID_TIME_T *timestamp, bool makePowerOf2 ) {
+void R_LoadImage( const char *cname, byte **pic, int *width, int *height, ID_TIME_T *timestamp, bool makePowerOf2, textureDepth_t *outDepth ) {
 	idStr name = cname;
 
 	if ( pic ) {
@@ -1021,14 +1032,24 @@ void R_LoadImage( const char *cname, byte **pic, int *width, int *height, ID_TIM
 		*height = 0;
 	}
 
+	name.ToLower();
+	idStr ext;
+	name.ExtractFileExtension( ext );
+
+	if ( ext == "exr" ) {
+		LoadEXR( name.c_str(), pic, width, height, timestamp );
+		if ( outDepth ) {
+			*outDepth = TD_HDR_FLOAT;
+		}
+		goto post_load;
+	}
+
 	name.DefaultFileExtension( ".tga" );
 
 	if (name.Length()<5) {
 		return;
 	}
 
-	name.ToLower();
-	idStr ext;
 	name.ExtractFileExtension( ext );
 
 	if ( ext == "tga" ) {
@@ -1048,6 +1069,7 @@ void R_LoadImage( const char *cname, byte **pic, int *width, int *height, ID_TIM
 		LoadSVG( name.c_str(), pic, width, height, timestamp );
 	}
 
+post_load:
 	if ( ( width && *width < 1 ) || ( height && *height < 1 ) ) {
 		if ( pic && *pic ) {
 			R_StaticFree( *pic );
@@ -1079,13 +1101,21 @@ void R_LoadImage( const char *cname, byte **pic, int *width, int *height, ID_TIM
 				scaled_height >>= 1;
 			}
 
-			resampledBuffer = R_ResampleTexture( *pic, w, h, scaled_width, scaled_height );
+			if ( outDepth && *outDepth == TD_HDR_FLOAT ) {
+				resampledBuffer = (byte *)R_ResampleTextureFloat( (const float *)*pic, w, h, scaled_width, scaled_height );
+			} else {
+				resampledBuffer = R_ResampleTexture( *pic, w, h, scaled_width, scaled_height );
+			}
 			R_StaticFree( *pic );
 			*pic = resampledBuffer;
 			*width = scaled_width;
 			*height = scaled_height;
 		}
 	}
+}
+
+void R_LoadImage( const char *cname, byte **pic, int *width, int *height, ID_TIME_T *timestamp, bool makePowerOf2 ) {
+	R_LoadImage( cname, pic, width, height, timestamp, makePowerOf2, NULL );
 }
 
 
