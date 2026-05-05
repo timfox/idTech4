@@ -136,7 +136,7 @@ git clone --recurse-submodules https://github.com/timfox/idTech4.git
 # or, after clone:  git submodule update --init --recursive
 ```
 
-A **Core Dialog** reference tool (XML + JSON loaders, `*` / `_`, templates including `<srai>`, predicates, etc.) lives under **`tools/aiml3/`** — see [tools/aiml3/README.md](tools/aiml3/README.md).
+A **Core Dialog** reference tool (XML + JSON + **USDA** subset loaders, `*` / `_`, templates including `<srai>`, predicates, etc.) lives under **`tools/aiml3/`** — see [tools/aiml3/README.md](tools/aiml3/README.md) and [docs/USD_AIML_INTERPRETER.md](docs/USD_AIML_INTERPRETER.md).
 
 ## Bullet Physics (optional, Windows)
 

@@ -23,6 +23,10 @@ struct Category {
 	std::string that;
 	std::string topic; // "*" = default catch-all
 	std::string cooldown; // parsed but not enforced in reference tool
+	std::vector<std::string> directives;
+	std::vector<std::string> require_clauses;
+	std::vector<std::string> unless;
+	std::vector<std::string> effects;
 	int fileOrder = 0;
 	std::shared_ptr<TmplNode> tmpl;
 
@@ -84,6 +88,7 @@ private:
 
 bool load_json_file( Interpreter &interp, const char *path, std::string &err );
 bool load_xml_file( Interpreter &interp, const char *path, std::string &err );
+bool load_usda_file( Interpreter &interp, const char *path, std::string &err );
 
 std::shared_ptr<TmplNode> parse_template_xmlish( const std::string &src, std::string &err );
 std::shared_ptr<TmplNode> template_from_plain_string( const std::string &s );

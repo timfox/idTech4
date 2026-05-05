@@ -1,0 +1,16 @@
+#usda 1.0
+(
+    doc = "AIML 3.0 Core — USDA sample for aiml3 reference interpreter"
+)
+
+def Scope "AIML" {
+    def AimlCategory "hello_plain" {
+        string pattern = "HELLO"
+        string template = "Hello from AIML 3.0 Core (USDA)."
+    }
+
+    def AimlCategory "hello_star" {
+        string pattern = "HELLO *"
+        string template = "Hello, <star/>."
+    }
+}
