@@ -1492,7 +1492,15 @@ idImage	*idImageManager::ImageFromFile( const char *_name, textureFilter_t filte
 	// strip any .tga file extensions from anywhere in the _name, including image program parameters
 	name = _name;
 	name.Replace( ".tga", "" );
+	name.Replace( ".exr", "" );
 	name.BackSlashesToSlashes();
+
+	textureDepth_t effectiveDepth = depth;
+	idStr rawName( _name );
+	rawName.ToLower();
+	if ( effectiveDepth < TD_HDR_FLOAT && rawName.Find( ".exr" ) >= 0 ) {
+		effectiveDepth = TD_HDR_FLOAT;
+	}
 
 	//
 	// see if the image is already loaded, unless we
@@ -1515,7 +1523,7 @@ idImage	*idImageManager::ImageFromFile( const char *_name, textureFilter_t filte
 				continue;
 			}
 
-			if ( image->allowDownSize == allowDownSize && image->depth == depth ) {
+			if ( image->allowDownSize == allowDownSize && image->depth == effectiveDepth ) {
 				// note that it is used this level load
 				image->levelLoadReferenced = true;
 				if ( image->partialImage != NULL ) {
@@ -1529,10 +1537,10 @@ idImage	*idImageManager::ImageFromFile( const char *_name, textureFilter_t filte
 			if ( !image->allowDownSize ) {
 				allowDownSize = false;
 			}
-			if ( image->depth > depth ) {
-				depth = image->depth;
+			if ( image->depth > effectiveDepth ) {
+				effectiveDepth = image->depth;
 			}
-			if ( image->allowDownSize == allowDownSize && image->depth == depth ) {
+			if ( image->allowDownSize == allowDownSize && image->depth == effectiveDepth ) {
 				// the already created one is already the highest quality
 				image->levelLoadReferenced = true;
 				if ( image->partialImage != NULL ) {
@@ -1542,7 +1550,7 @@ idImage	*idImageManager::ImageFromFile( const char *_name, textureFilter_t filte
 			}
 
 			image->allowDownSize = allowDownSize;
-			image->depth = depth;
+			image->depth = effectiveDepth;
 			image->levelLoadReferenced = true;
 			if ( image->partialImage != NULL ) {
 				image->partialImage->levelLoadReferenced = true;
@@ -1569,7 +1577,7 @@ idImage	*idImageManager::ImageFromFile( const char *_name, textureFilter_t filte
 
 	image->allowDownSize = allowDownSize;
 	image->repeat = repeat;
-	image->depth = depth;
+	image->depth = effectiveDepth;
 	image->type = TT_2D;
 	image->cubeFiles = cubeMap;
 	image->filter = filter;
@@ -1583,7 +1591,7 @@ idImage	*idImageManager::ImageFromFile( const char *_name, textureFilter_t filte
 
 		image->partialImage->allowDownSize = allowDownSize;
 		image->partialImage->repeat = repeat;
-		image->partialImage->depth = depth;
+		image->partialImage->depth = effectiveDepth;
 		image->partialImage->type = TT_2D;
 		image->partialImage->cubeFiles = cubeMap;
 		image->partialImage->filter = filter;

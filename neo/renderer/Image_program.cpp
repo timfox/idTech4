@@ -389,6 +389,14 @@ static bool R_ParseImageProgram_r( idLexer &src, byte **pic, int *width, int *he
 		if ( !R_ParseImageProgram_r( src, pic, width, height, timestamps, depth ) ) {
 			return false;
 		}
+		if ( depth && *depth == TD_HDR_FLOAT ) {
+			common->Warning( "image program: heightmap() is not supported on OpenEXR (float) sources" );
+			if ( pic && *pic ) {
+				R_StaticFree( *pic );
+				*pic = NULL;
+			}
+			return false;
+		}
 
 		MatchAndAppendToken( src, "," );
 
@@ -427,6 +435,17 @@ static bool R_ParseImageProgram_r( idLexer &src, byte **pic, int *width, int *he
 			}
 			return false;
 		}
+		if ( depth && *depth == TD_HDR_FLOAT ) {
+			common->Warning( "image program: addnormals() is not supported on OpenEXR (float) sources" );
+			if ( pic && *pic ) {
+				R_StaticFree( *pic );
+				*pic = NULL;
+			}
+			if ( pic2 ) {
+				R_StaticFree( pic2 );
+			}
+			return false;
+		}
 
 		// process it
 		if ( pic ) {
@@ -445,6 +464,14 @@ static bool R_ParseImageProgram_r( idLexer &src, byte **pic, int *width, int *he
 		MatchAndAppendToken( src, "(" );
 
 		if ( !R_ParseImageProgram_r( src, pic, width, height, timestamps, depth ) ) {
+			return false;
+		}
+		if ( depth && *depth == TD_HDR_FLOAT ) {
+			common->Warning( "image program: smoothnormals() is not supported on OpenEXR (float) sources" );
+			if ( pic && *pic ) {
+				R_StaticFree( *pic );
+				*pic = NULL;
+			}
 			return false;
 		}
 
@@ -478,6 +505,17 @@ static bool R_ParseImageProgram_r( idLexer &src, byte **pic, int *width, int *he
 			}
 			return false;
 		}
+		if ( depth && *depth == TD_HDR_FLOAT ) {
+			common->Warning( "image program: add() is not supported on OpenEXR (float) sources" );
+			if ( pic && *pic ) {
+				R_StaticFree( *pic );
+				*pic = NULL;
+			}
+			if ( pic2 ) {
+				R_StaticFree( pic2 );
+			}
+			return false;
+		}
 		
 		// process it
 		if ( pic ) {
@@ -504,6 +542,15 @@ static bool R_ParseImageProgram_r( idLexer &src, byte **pic, int *width, int *he
 			scale[i] = token.GetFloatValue();
 		}
 
+		if ( depth && *depth == TD_HDR_FLOAT ) {
+			common->Warning( "image program: scale() is not supported on OpenEXR (float) sources" );
+			if ( pic && *pic ) {
+				R_StaticFree( *pic );
+				*pic = NULL;
+			}
+			return false;
+		}
+
 		// process it
 		if ( pic ) {
 			R_ImageScale( *pic, *width, *height, scale );
@@ -518,6 +565,15 @@ static bool R_ParseImageProgram_r( idLexer &src, byte **pic, int *width, int *he
 
 		R_ParseImageProgram_r( src, pic, width, height, timestamps, depth );
 
+		if ( depth && *depth == TD_HDR_FLOAT ) {
+			common->Warning( "image program: invertAlpha() is not supported on OpenEXR (float) sources" );
+			if ( pic && *pic ) {
+				R_StaticFree( *pic );
+				*pic = NULL;
+			}
+			return false;
+		}
+
 		// process it
 		if ( pic ) {
 			R_InvertAlpha( *pic, *width, *height );
@@ -531,6 +587,15 @@ static bool R_ParseImageProgram_r( idLexer &src, byte **pic, int *width, int *he
 		MatchAndAppendToken( src, "(" );
 
 		R_ParseImageProgram_r( src, pic, width, height, timestamps, depth );
+
+		if ( depth && *depth == TD_HDR_FLOAT ) {
+			common->Warning( "image program: invertColor() is not supported on OpenEXR (float) sources" );
+			if ( pic && *pic ) {
+				R_StaticFree( *pic );
+				*pic = NULL;
+			}
+			return false;
+		}
 
 		// process it
 		if ( pic ) {
@@ -547,6 +612,15 @@ static bool R_ParseImageProgram_r( idLexer &src, byte **pic, int *width, int *he
 		MatchAndAppendToken( src, "(" );
 
 		R_ParseImageProgram_r( src, pic, width, height, timestamps, depth );
+
+		if ( depth && *depth == TD_HDR_FLOAT ) {
+			common->Warning( "image program: makeIntensity() is not supported on OpenEXR (float) sources" );
+			if ( pic && *pic ) {
+				R_StaticFree( *pic );
+				*pic = NULL;
+			}
+			return false;
+		}
 
 		// copy red to green, blue, and alpha
 		if ( pic ) {
@@ -569,6 +643,15 @@ static bool R_ParseImageProgram_r( idLexer &src, byte **pic, int *width, int *he
 		MatchAndAppendToken( src, "(" );
 
 		R_ParseImageProgram_r( src, pic, width, height, timestamps, depth );
+
+		if ( depth && *depth == TD_HDR_FLOAT ) {
+			common->Warning( "image program: makeAlpha() is not supported on OpenEXR (float) sources" );
+			if ( pic && *pic ) {
+				R_StaticFree( *pic );
+				*pic = NULL;
+			}
+			return false;
+		}
 
 		// average RGB into alpha, then set RGB to white
 		if ( pic ) {
@@ -593,7 +676,7 @@ static bool R_ParseImageProgram_r( idLexer &src, byte **pic, int *width, int *he
 	}
 
 	// load it as an image
-	R_LoadImage( token.c_str(), pic, width, height, &timestamp, true );
+	R_LoadImage( token.c_str(), pic, width, height, &timestamp, true, depth );
 
 	if ( timestamp == -1 ) {
 		return false;

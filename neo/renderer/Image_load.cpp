@@ -97,6 +97,8 @@ int idImage::BitsForInternalFormat( int internalFormat ) const {
 		return 4;			// not sure
 	case GL_COMPRESSED_RGBA_ARB:
 		return 8;			// not sure
+	case GL_RGBA_FLOAT32_ATI:
+		return 128;
 	default:
 		common->Error( "R_BitsForInternalFormat: BAD FORMAT:%i", internalFormat );
 	}
@@ -271,6 +273,10 @@ GLenum idImage::SelectInternalFormat( const byte **dataPtrs, int numDataPtrs, in
 	// catch normal maps first
 	if ( minimumDepth == TD_BUMP ) {
 		return GL_RGBA8;
+	}
+
+	if ( minimumDepth == TD_HDR_FLOAT ) {
+		return GL_RGBA_FLOAT32_ATI;
 	}
 
 	// allow a complete override of image compression with a cvar
@@ -469,6 +475,107 @@ void idImage::GenerateImage( const byte *pic, int width, int height,
 	// an image match from a shader before OpenGL starts would miss
 	// the generated texture
 	if ( !glConfig.isInitialized ) {
+		return;
+	}
+
+	// -------------------------------------------------------------------------
+	// OpenEXR / float RGBA path (linear, full mip chain, no DXT)
+	// -------------------------------------------------------------------------
+	if ( depthParm == TD_HDR_FLOAT ) {
+		float *shrunkF;
+
+		if ( repeat == TR_CLAMP_TO_ZERO ) {
+			preserveBorder = true;
+		} else {
+			preserveBorder = false;
+		}
+
+		scaled_width = width;
+		scaled_height = height;
+		if ( scaled_width != width || scaled_height != height ) {
+			common->Error( "R_CreateImage: not a power of 2 image" );
+		}
+		GetDownsize( scaled_width, scaled_height );
+
+		glGenTextures( 1, &texnum );
+		internalFormat = GL_RGBA_FLOAT32_ATI;
+		isMonochrome = false;
+
+		if ( ( scaled_width == width ) && ( scaled_height == height ) ) {
+			const size_t sz = (size_t)scaled_width * (size_t)scaled_height * 4u * sizeof( float );
+			scaledBuffer = (byte *)R_StaticAlloc( (int)sz );
+			memcpy( scaledBuffer, pic, sz );
+		} else {
+			const float *srcF = (const float *)pic;
+			float *cur = R_MipMapFloat( srcF, width, height, preserveBorder );
+			int cw = width >> 1;
+			int ch = height >> 1;
+			if ( cw < 1 ) {
+				cw = 1;
+			}
+			if ( ch < 1 ) {
+				ch = 1;
+			}
+			while ( cw > scaled_width || ch > scaled_height ) {
+				shrunkF = R_MipMapFloat( cur, cw, ch, preserveBorder );
+				R_StaticFree( cur );
+				cur = shrunkF;
+				cw >>= 1;
+				ch >>= 1;
+				if ( cw < 1 ) {
+					cw = 1;
+				}
+				if ( ch < 1 ) {
+					ch = 1;
+				}
+			}
+			scaled_width = cw;
+			scaled_height = ch;
+			scaledBuffer = (byte *)cur;
+		}
+
+		uploadHeight = scaled_height;
+		uploadWidth = scaled_width;
+		type = TT_2D;
+
+		if ( repeat == TR_CLAMP_TO_ZERO ) {
+			float border[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+			R_SetBorderTexelsFloat( (float *)scaledBuffer, scaled_width, scaled_height, border );
+		}
+		if ( repeat == TR_CLAMP_TO_ZERO_ALPHA ) {
+			float border[4] = { 1.0f, 1.0f, 1.0f, 0.0f };
+			R_SetBorderTexelsFloat( (float *)scaledBuffer, scaled_width, scaled_height, border );
+		}
+
+		Bind();
+
+		glTexImage2D( GL_TEXTURE_2D, 0, internalFormat, scaled_width, scaled_height, 0, GL_RGBA, GL_FLOAT, scaledBuffer );
+
+		int miplevel = 0;
+		while ( scaled_width > 1 || scaled_height > 1 ) {
+			shrunkF = R_MipMapFloat( (const float *)scaledBuffer, scaled_width, scaled_height, preserveBorder );
+			R_StaticFree( scaledBuffer );
+			scaledBuffer = (byte *)shrunkF;
+
+			scaled_width >>= 1;
+			scaled_height >>= 1;
+			if ( scaled_width < 1 ) {
+				scaled_width = 1;
+			}
+			if ( scaled_height < 1 ) {
+				scaled_height = 1;
+			}
+			miplevel++;
+
+			glTexImage2D( GL_TEXTURE_2D, miplevel, internalFormat, scaled_width, scaled_height, 0, GL_RGBA, GL_FLOAT, scaledBuffer );
+		}
+
+		if ( scaledBuffer ) {
+			R_StaticFree( scaledBuffer );
+		}
+
+		SetImageFilterAndRepeat();
+		GL_CheckErrors();
 		return;
 	}
 
@@ -1569,12 +1676,16 @@ void	idImage::ActuallyLoadImage( bool checkForPrecompressed, bool fromBackEnd ) 
 			// fall through to load the normal image
 		}
 
-		R_LoadImageProgram( imgName, &pic, &width, &height, &timestamp, &depth );
+		textureDepth_t loadedDepth = depth;
+		R_LoadImageProgram( imgName, &pic, &width, &height, &timestamp, &loadedDepth );
 
 		if ( pic == NULL ) {
 			common->Warning( "Couldn't load image: %s", imgName.c_str() );
 			MakeDefault();
 			return;
+		}
+		if ( loadedDepth == TD_HDR_FLOAT ) {
+			depth = TD_HDR_FLOAT;
 		}
 /*
 		// swap the red and alpha for rxgb support
@@ -1592,7 +1703,11 @@ void	idImage::ActuallyLoadImage( bool checkForPrecompressed, bool fromBackEnd ) 
 		// build a hash for checking duplicate image files
 		// NOTE: takes about 10% of image load times (SD)
 		// may not be strictly necessary, but some code uses it, so let's leave it in
-		imageHash = MD4_BlockChecksum( pic, width * height * 4 );
+		if ( depth == TD_HDR_FLOAT ) {
+			imageHash = MD4_BlockChecksum( pic, width * height * 4 * (int)sizeof( float ) );
+		} else {
+			imageHash = MD4_BlockChecksum( pic, width * height * 4 );
+		}
 
 		GenerateImage( pic, width, height, filter, allowDownSize, repeat, depth );
 		timestamp = timestamp;
@@ -2088,6 +2203,9 @@ void idImage::Print() const {
 		break;
 	case GL_RGBA8:
 		common->Printf( "RGBA8 " );
+		break;
+	case GL_RGBA_FLOAT32_ATI:
+		common->Printf( "RGBA32F" );
 		break;
 	case GL_RGB8:
 		common->Printf( "RGB8  " );
