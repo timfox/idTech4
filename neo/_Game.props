@@ -7,7 +7,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <PreprocessorDefinitions>__DOOM__;GAME_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)..\third_party\entt\single_include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeader>
       </PrecompiledHeader>
     </ClCompile>

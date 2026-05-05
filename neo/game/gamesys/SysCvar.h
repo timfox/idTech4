@@ -31,6 +31,8 @@ If you have questions concerning this license or the applicable additional terms
 
 extern idCVar	developer;
 
+extern idCVar	g_ecsExperimental;
+
 extern idCVar	g_cinematic;
 extern idCVar	g_cinematicMaxSkipTime;
 

@@ -89,6 +89,9 @@ idCVar ui_chat(						"ui_chat",					"0",			CVAR_GAME | CVAR_USERINFO | CVAR_BOOL
 // change anytime vars
 idCVar developer(					"developer",				"0",			CVAR_GAME | CVAR_BOOL, "" );
 
+idCVar g_ecsExperimental(			"g_ecsExperimental",		"0",			CVAR_GAME | CVAR_BOOL | CVAR_ARCHIVE,
+	"When 1, ticks the optional EnTT experimental registry each frame (parallel to idEntity; see docs/ECS_EDA_EXPERIMENTAL.md)." );
+
 idCVar r_aspectRatio( 				"r_aspectRatio",			"0",			CVAR_RENDERER | CVAR_INTEGER | CVAR_ARCHIVE, "aspect ratio of view:\n0 = 4:3\n1 = 16:9\n2 = 16:10", 0, 2 );
 
 idCVar g_cinematic(					"g_cinematic",				"1",			CVAR_GAME | CVAR_BOOL, "skips updating entities that aren't marked 'cinematic' '1' during cinematics" );
