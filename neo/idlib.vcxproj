@@ -199,6 +199,7 @@
     <ClCompile Include="idlib\BitMsg.cpp" />
     <ClCompile Include="idlib\Dict.cpp" />
     <ClCompile Include="idlib\Heap.cpp" />
+    <ClCompile Include="idlib\ParallelJob.cpp" />
     <ClCompile Include="idlib\LangDict.cpp" />
     <ClCompile Include="idlib\Lib.cpp" />
     <ClCompile Include="idlib\MapFile.cpp" />
@@ -277,6 +278,7 @@
     <ClInclude Include="idlib\LangDict.h" />
     <ClInclude Include="idlib\Lib.h" />
     <ClInclude Include="idlib\MapFile.h" />
+    <ClInclude Include="idlib\ParallelJob.h" />
     <ClInclude Include="idlib\precompiled.h" />
     <ClInclude Include="idlib\Timer.h" />
   </ItemGroup>

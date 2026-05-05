@@ -173,6 +173,7 @@ template<class T> ID_INLINE T	Min( T x, T y ) { return ( x < y ) ? x : y; }
 // math
 #include "math/Simd.h"
 #include "math/Math.h"
+#include "ParallelJob.h"
 #include "math/Random.h"
 #include "math/Complex.h"
 #include "math/Vector.h"

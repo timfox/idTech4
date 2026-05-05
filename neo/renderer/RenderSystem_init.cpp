@@ -57,6 +57,10 @@ idCVar r_customHeight( "r_customHeight", "486", CVAR_RENDERER | CVAR_ARCHIVE | C
 idCVar r_singleTriangle( "r_singleTriangle", "0", CVAR_RENDERER | CVAR_BOOL, "only draw a single triangle per primitive" );
 idCVar r_checkBounds( "r_checkBounds", "0", CVAR_RENDERER | CVAR_BOOL, "compare all surface bounds with precalculated ones" );
 
+idCVar r_parallelImageJobs( "r_parallelImageJobs", "1", CVAR_RENDERER | CVAR_BOOL, "use worker threads for large CPU texture resample/mipmap passes" );
+idCVar r_parallelImageMinRows( "r_parallelImageMinRows", "64", CVAR_RENDERER | CVAR_INTEGER, "minimum output rows before parallel image jobs run", 8.0f, 4096.0f );
+idCVar r_parallelImageMaxThreads( "r_parallelImageMaxThreads", "0", CVAR_RENDERER | CVAR_INTEGER, "cap worker threads for image jobs (0 = auto, max 32)", 0.0f, 32.0f );
+
 idCVar r_useNV20MonoLights( "r_useNV20MonoLights", "1", CVAR_RENDERER | CVAR_INTEGER, "use pass optimization for mono lights" );
 idCVar r_useConstantMaterials( "r_useConstantMaterials", "1", CVAR_RENDERER | CVAR_BOOL, "use pre-calculated material registers if possible" );
 idCVar r_useTripleTextureARB( "r_useTripleTextureARB", "1", CVAR_RENDERER | CVAR_BOOL, "cards with 3+ texture units do a two pass instead of three pass" );

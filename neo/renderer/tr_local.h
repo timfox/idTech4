@@ -846,6 +846,10 @@ extern idCVar r_cgFragmentProfile;		// arbfp1, fp30
 
 extern idCVar r_checkBounds;			// compare all surface bounds with precalculated ones
 
+extern idCVar r_parallelImageJobs;		// multithread large CPU resample/mipmap rows
+extern idCVar r_parallelImageMinRows;
+extern idCVar r_parallelImageMaxThreads;
+
 extern idCVar r_useNV20MonoLights;		// 1 = allow an interaction pass optimization
 extern idCVar r_useLightPortalFlow;		// 1 = do a more precise area reference determination
 extern idCVar r_useTripleTextureARB;	// 1 = cards with 3+ texture units do a two pass instead of three pass
