@@ -44,6 +44,12 @@ jobs:
           ./tools/vulkanrt_caps/vulkanrt_caps
           make -C tools/aiml3 clean all CXX="${{ matrix.cxx }}"
           printf 'HELLO\nquit\n' | ./tools/aiml3/aiml3 --load tools/aiml3/test/hello.json
+          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq glpk-utils
+          fi
+          make -C tools/ampl_clipper clean all CXX="${{ matrix.cxx }}"
+          ./tools/ampl_clipper/ampl_clipper
 
       - name: Build and run (Windows MSVC)
         if: runner.os == 'Windows'
@@ -79,4 +85,10 @@ jobs:
           cl /nologo /EHsc /O2 /W3 /Fe:aiml3.exe main.cpp normalize.cpp match.cpp template.cpp interpreter.cpp load_json.cpp load_xml.cpp
           if errorlevel 1 exit /b 1
           (echo HELLO& echo quit) | aiml3.exe --load test\hello.json
+          if errorlevel 1 exit /b 1
+          cd /d "%GITHUB_WORKSPACE%\tools\ampl_clipper"
+          if exist ampl_clipper.exe del ampl_clipper.exe
+          cl /nologo /EHsc /O2 /W3 /I "..\..\third_party\clipper2\CPP\Clipper2Lib\include" /Fe:ampl_clipper.exe main.cpp "..\..\third_party\clipper2\CPP\Clipper2Lib\src\clipper.engine.cpp" "..\..\third_party\clipper2\CPP\Clipper2Lib\src\clipper.offset.cpp" "..\..\third_party\clipper2\CPP\Clipper2Lib\src\clipper.rectclip.cpp" "..\..\third_party\clipper2\CPP\Clipper2Lib\src\clipper.triangulation.cpp"
+          if errorlevel 1 exit /b 1
+          ampl_clipper.exe
           if errorlevel 1 exit /b 1
