@@ -44,11 +44,14 @@ static idCVar in_joy_buttons( "in_joy_buttons", "1", CVAR_SYSTEM | CVAR_ARCHIVE 
 	"Queue joydev button presses as K_JOY1.. keys (bind in game). 0 = axes only." );
 static idCVar in_joy_buttonBase( "in_joy_buttonBase", "0", CVAR_SYSTEM | CVAR_ARCHIVE | CVAR_INTEGER,
 	"First joydev button index mapped to K_JOY1 (usually 0)", 0, 31, idCmdSystem::ArgCompletion_Integer<0,31> );
+static idCVar in_joy_autoexec_profile( "in_joy_autoexec_profile", "0", CVAR_SYSTEM | CVAR_ARCHIVE | CVAR_BOOL,
+	"If 1, run exec steamdeck.cfg once when joydev first opens (Linux). Requires steamdeck.cfg on disk search path." );
 
 namespace {
 int g_joyFd = -1;
 int g_axisAccum[8];
 bool g_warnedOpenFail = false;
+bool g_autoexecProfileDone = false;
 
 static void joydev_shutdown() {
 	if ( g_joyFd >= 0 ) {
@@ -86,6 +89,7 @@ static void joydev_apply_deadzone( int *out8 ) {
 void Sys_ShutdownJoystickFill( void ) {
 	joydev_shutdown();
 	g_warnedOpenFail = false;
+	g_autoexecProfileDone = false;
 }
 
 void Sys_FillJoystickAxes( int *axes, int num ) {
@@ -113,6 +117,13 @@ void Sys_FillJoystickAxes( int *axes, int num ) {
 		if ( common ) {
 			common->Printf( "Linux joydev: opened %s\n", path );
 		}
+		if ( in_joy_autoexec_profile.GetBool() && !g_autoexecProfileDone && cmdSystem ) {
+			cmdSystem->BufferCommandText( CMD_EXEC_APPEND, "exec steamdeck.cfg\n" );
+			g_autoexecProfileDone = true;
+			if ( common ) {
+				common->Printf( "Linux joydev: queued exec steamdeck.cfg (in_joy_autoexec_profile 1)\n" );
+			}
+		}
 	}
 
 	js_event ev;
@@ -124,7 +135,7 @@ void Sys_FillJoystickAxes( int *axes, int num ) {
 		if ( ev.type == JS_EVENT_AXIS && ev.number < 8 ) {
 			g_axisAccum[ev.number] = (int)ev.value;
 		} else if ( ev.type == JS_EVENT_BUTTON && in_joy_buttons.GetBool() ) {
-			const int base = in_joy_buttonBase.GetInteger();
+			const int base = idMath::ClampInt( 0, 31, in_joy_buttonBase.GetInteger() );
 			const int idx = (int)ev.number - base;
 			if ( idx >= 0 && idx < 32 ) {
 				const int key = K_JOY1 + idx;

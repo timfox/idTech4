@@ -21,6 +21,16 @@ bind "JOY4" "_impulse14"
 
 If Steam Input already maps the pad to **keyboard** keys, set **`in_joy_buttons 0`** to avoid duplicate inputs.
 
+### Default bind profile (in repo)
+
+This repository ships **[base/steamdeck.cfg](base/steamdeck.cfg)** with starter `bind "JOYn"` lines (attack, PDA, reload, zoom, next/prev weapon, sprint, crouch). Copy it next to your game **`base/`** folder if missing, then:
+
+```text
+exec steamdeck.cfg
+```
+
+Or set **`in_joy_autoexec_profile 1`** (archive) so the engine **queues `exec steamdeck.cfg` once** when joydev first opens.
+
 ## CVars
 
 | CVar | Default | Meaning |
@@ -35,6 +45,7 @@ If Steam Input already maps the pad to **keyboard** keys, set **`in_joy_buttons 
 | `in_joyLookScale` | `0.35` | scales right-stick contribution to look |
 | `in_joy_buttons` | `1` | queue joydev buttons as `K_JOY*` keys |
 | `in_joy_buttonBase` | `0` | subtract from joydev button number before mapping to `K_JOY1` |
+| `in_joy_autoexec_profile` | `0` | if `1`, run `exec steamdeck.cfg` once when joydev opens |
 
 ## Tuning on Deck
 

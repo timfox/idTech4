@@ -22,7 +22,7 @@ Quick **Vulkan driver / extension check** (Linux, `libvulkan.so.1`):
 make -C tools/vulkan_caps && ./tools/vulkan_caps/vulkan_caps
 ```
 
-**Gamepad / Deck sticks (Linux joydev):** see [docs/STEAMDECK_CONTROLS.md](docs/STEAMDECK_CONTROLS.md) (`in_joydev`, axis mapping, `in_joyLookScale`).
+**Gamepad / Deck sticks (Linux joydev):** see [docs/STEAMDECK_CONTROLS.md](docs/STEAMDECK_CONTROLS.md) (`in_joydev`, axis mapping, `in_joyLookScale`). Starter binds: [base/steamdeck.cfg](base/steamdeck.cfg) (`exec steamdeck.cfg` or `in_joy_autoexec_profile 1`).
 
 ## What Is IceBridge?
 
