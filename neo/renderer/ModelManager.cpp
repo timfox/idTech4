@@ -298,6 +298,9 @@ idRenderModel *idRenderModelManagerLocal::GetModel( const char *modelName, bool 
 	} else if ( extension.Icmp( MD5_MESH_EXT ) == 0 ) {
 		model = new idRenderModelMD5;
 		model->InitFromFile( modelName );
+	} else if ( extension.Icmp( "gltf" ) == 0 || extension.Icmp( "glb" ) == 0 ) {
+		model = new idRenderModelGlTF;
+		model->InitFromFile( modelName );
 	} else if ( extension.Icmp( "md3" ) == 0 ) {
 		model = new idRenderModelMD3;
 		model->InitFromFile( modelName );

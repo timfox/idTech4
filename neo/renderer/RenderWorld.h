@@ -56,6 +56,12 @@ const int SHADERPARM_TIME_OF_DEATH	= 7;	// for the monster skin-burn-away effect
 // model parms
 const int SHADERPARM_MD5_SKINSCALE	= 8;	// for scaling vertex offsets on md5 models (jack skellington effect)
 
+// GlTF morph target weights (0..1 each); first N weights map to the asset's morph targets in order (max 4 here; shares indices with MD5 skin scale / beam parms—use on dedicated props).
+const int SHADERPARM_GLTF_MORPH0	= 8;
+const int SHADERPARM_GLTF_MORPH1	= 9;
+const int SHADERPARM_GLTF_MORPH2	= 10;
+const int SHADERPARM_GLTF_MORPH3	= 11;
+
 const int SHADERPARM_MD3_FRAME		= 8;
 const int SHADERPARM_MD3_LASTFRAME	= 9;
 const int SHADERPARM_MD3_BACKLERP	= 10;

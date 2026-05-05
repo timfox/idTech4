@@ -123,6 +123,10 @@ Merging [RBDOOM-3-BFG](https://github.com/RobertBeckebans/RBDOOM-3-BFG) is not a
 
 Useful **id Tech 5–era directions** for this codebase—**multi-core–friendly work**, **streaming I/O**, **GPU-first RHI**, **memory and frame budgets**—are outlined without **virtual texturing / MegaTextures** in [docs/IDTECH5_ASPECTS_NO_MEGATEXTURES.md](docs/IDTECH5_ASPECTS_NO_MEGATEXTURES.md), mapped to existing files (`FileSystem`, renderer images, IceBridge/Vulkan).
 
+## GlTF 2.0 models (`.gltf` / `.glb`)
+
+**DoomDLL** loads **`models/.../*.gltf`** and **`*.glb`** as **dynamic** meshes (same hook as `.md5mesh`). **Morph targets** with `POSITION` deltas are blended on the CPU; drive the first four weights with **`shaderParms[8]`–`shaderParms[11]`** (`SHADERPARM_GLTF_MORPH0` … `MORPH3` in `neo/renderer/RenderWorld.h`). Default material is **`_white`** unless extended later. See `neo/renderer/Model_glTF.cpp` for format limits (no Draco/sparse/external buffers).
+
 ## Map districts (`info_location`)
 
 HUD **area names** and optional **district** grouping for `info_location` / `location_separator` are documented in [docs/DISTRICT_SYSTEM.md](docs/DISTRICT_SYSTEM.md) (priority overlap, CVars, console commands).
