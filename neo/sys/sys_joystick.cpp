@@ -5,7 +5,8 @@ Doom 3 GPL Source Code
 Copyright (C) 1999-2011 id Software LLC, a ZeniMax Media company.
 
 Linux: poll /dev/input/js* (joydev) so Steam Deck / gamepad sticks feed
-idUsercmdGenLocal::JoystickMove. Other platforms: no-op stub.
+idUsercmdGenLocal::JoystickMove, and optionally queue face buttons as
+K_JOY* keys. Other platforms: no-op stub.
 
 ===========================================================================
 */
@@ -14,6 +15,7 @@ idUsercmdGenLocal::JoystickMove. Other platforms: no-op stub.
 #pragma hdrstop
 
 #include "../framework/CVarSystem.h"
+#include "../posix/posix_public.h"
 #include "../sys/sys_public.h"
 
 #if defined( __linux__ ) && !defined( ID_DEDICATED )
@@ -38,6 +40,10 @@ static idCVar in_joy_axisLookPitch( "in_joy_axisLookPitch", "4", CVAR_SYSTEM | C
 	"joydev axis index for right-stick look pitch", 0, 7, idCmdSystem::ArgCompletion_Integer<0,7> );
 static idCVar in_joy_deadzone( "in_joy_deadzone", "20", CVAR_SYSTEM | CVAR_ARCHIVE | CVAR_INTEGER,
 	"Percent deadzone for analog sticks (0-90)", 0, 90, idCmdSystem::ArgCompletion_Integer<0,90> );
+static idCVar in_joy_buttons( "in_joy_buttons", "1", CVAR_SYSTEM | CVAR_ARCHIVE | CVAR_BOOL,
+	"Queue joydev button presses as K_JOY1.. keys (bind in game). 0 = axes only." );
+static idCVar in_joy_buttonBase( "in_joy_buttonBase", "0", CVAR_SYSTEM | CVAR_ARCHIVE | CVAR_INTEGER,
+	"First joydev button index mapped to K_JOY1 (usually 0)", 0, 31, idCmdSystem::ArgCompletion_Integer<0,31> );
 
 namespace {
 int g_joyFd = -1;
@@ -117,6 +123,14 @@ void Sys_FillJoystickAxes( int *axes, int num ) {
 		}
 		if ( ev.type == JS_EVENT_AXIS && ev.number < 8 ) {
 			g_axisAccum[ev.number] = (int)ev.value;
+		} else if ( ev.type == JS_EVENT_BUTTON && in_joy_buttons.GetBool() ) {
+			const int base = in_joy_buttonBase.GetInteger();
+			const int idx = (int)ev.number - base;
+			if ( idx >= 0 && idx < 32 ) {
+				const int key = K_JOY1 + idx;
+				const bool down = ( ev.value != 0 );
+				Posix_QueEvent( SE_KEY, key, down ? 1 : 0, 0, NULL );
+			}
 		}
 	}
 	if ( nread < 0 && errno != EAGAIN && errno != EWOULDBLOCK ) {

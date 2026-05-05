@@ -8,7 +8,18 @@ This fork wires **analog gamepad movement** into the existing `JoystickMove` pat
 - **Optional vertical axis** (`AXIS_UP`): bound to a joydev axis index (default **2**, often L2/R2 analog on Deck layouts).
 - **Right stick look**: axes mapped to `AXIS_YAW` / `AXIS_PITCH`, scaled by **`in_joyLookScale`** and applied when **not** holding strafe (same phase as left-stick look).
 
-Face buttons still arrive as **keyboard** events from Steam Input / the compositor unless you add `EV_KEY` joydev handling later.
+### Face buttons (joydev)
+
+When **`in_joy_buttons` is 1** (default), joydev **button** events are queued as **`SE_KEY`** with **`K_JOY1`** … **`K_JOY32`** (`joydev` button index `n` maps to `K_JOY1 + n - in_joy_buttonBase`). Bind them in the game controls UI or `DoomConfig.cfg`, e.g.:
+
+```
+bind "JOY1" "_attack"
+bind "JOY2" "_use"
+bind "JOY3" "_reload"
+bind "JOY4" "_impulse14"
+```
+
+If Steam Input already maps the pad to **keyboard** keys, set **`in_joy_buttons 0`** to avoid duplicate inputs.
 
 ## CVars
 
@@ -22,6 +33,8 @@ Face buttons still arrive as **keyboard** events from Steam Input / the composit
 | `in_joy_axisLookPitch` | `4` | right stick pitch |
 | `in_joy_deadzone` | `20` | percent deadzone (0–90) on raw axis values |
 | `in_joyLookScale` | `0.35` | scales right-stick contribution to look |
+| `in_joy_buttons` | `1` | queue joydev buttons as `K_JOY*` keys |
+| `in_joy_buttonBase` | `0` | subtract from joydev button number before mapping to `K_JOY1` |
 
 ## Tuning on Deck
 
