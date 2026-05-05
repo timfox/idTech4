@@ -31,6 +31,8 @@ The D3D12-backed GL path is wired through the **`opengl`** project and helpers s
 
 **Steam Deck** does not offer practical **hardware ray tracing** for this engine’s DXR-style path. Portable work should prioritize **Vulkan raster** (swapchain, passes, post), **asset and pak loading**, and **media** (see [docs/VULKAN_PLATFORM_STEAMDECK.md](docs/VULKAN_PLATFORM_STEAMDECK.md)).
 
+**Linux build + Vulkan CVar:** [docs/LINUX_BUILD_VULKAN.md](docs/LINUX_BUILD_VULKAN.md) (packages, SCons notes, `r_icebridgeRHI vulkan`, troubleshooting).
+
 Quick **Vulkan driver / extension check** (Linux, `libvulkan.so.1`):
 
 ```bash
