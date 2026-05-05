@@ -10,4 +10,5 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
     </ClCompile>
   </ItemDefinitionGroup>
+  <Import Project="_CppLanguage.props" />
 </Project>

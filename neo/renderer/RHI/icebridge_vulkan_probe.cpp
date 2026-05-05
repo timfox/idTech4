@@ -94,7 +94,7 @@ static void R_VkInfo_f( const idCmdArgs &args ) {
 		return;
 	}
 
-	uint32_t apiVersion = VK_MAKE_VERSION( 1, 0, 0 );
+	uint32_t apiVersion = VK_API_VERSION_1_0;
 	if ( pfnEnumerateInstanceVersion ) {
 		if ( pfnEnumerateInstanceVersion( &apiVersion ) == VK_SUCCESS ) {
 			common->Printf( "Vulkan: vkEnumerateInstanceVersion reports API version %u.%u.%u\n",

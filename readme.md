@@ -12,6 +12,21 @@ The goal is to enhance it with modern rendering techniques while preserving the 
 
 No game assets are included in this fork.
 
+## Building and running
+
+This fork targets **64-bit Windows**. Open [`neo/Doom3.sln`](neo/Doom3.sln) in **Visual Studio** (the solution targets the **v145** MSVC platform toolset and **Windows 10.0** SDK as declared in the project files). Choose **Release \| x64** (or another non-dedicated configuration) and build the solution.
+
+The main C++ targets (**DoomDLL**, **Game**, **idLib**, **MayaImport**, **opengl**) compile as **`/std:c++latest`** via [`neo/_CppLanguage.props`](neo/_CppLanguage.props) (CurlLib stays on the compiler default because it builds C sources).
+
+Binaries are written next to the solution directory: **`Doom3.exe`** and **`gamex64.dll`** land in the repository root (one level above `neo/`), matching the `OutputFile` settings in the `.vcxproj` files.
+
+To run the game you still need **legal Doom 3 game data** (for example `base/pak000.pk4` and the rest of the stock packs). Typical options:
+
+- Copy **`Doom3.exe`** and **`gamex64.dll`** into an existing Doom 3 install folder next to the original assets, or  
+- Point the engine at that install with **`+set fs_basepath "C:\Path\To\Doom3"`** (see `neo/framework/FileSystem.cpp` for how search paths are built).
+
+The D3D12-backed GL path is wired through the **`opengl`** project and helpers such as [`neo/opengl/gl_d3d12wgl.cpp`](neo/opengl/gl_d3d12wgl.cpp); renderer initialization touches code like [`neo/renderer/RenderSystem_init.cpp`](neo/renderer/RenderSystem_init.cpp).
+
 ## What Is IceBridge?
 
 **IceBridge** is a compatibility and modernization renderer layer for older engines.

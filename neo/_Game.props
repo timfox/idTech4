@@ -19,4 +19,5 @@
       <Command>..\build\Win32\"$(Configuration)"\TypeInfo.exe</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
+  <Import Project="_CppLanguage.props" />
 </Project>

@@ -16,4 +16,5 @@
       <AdditionalLibraryDirectories>MayaImport/maya5.0/libs;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
+  <Import Project="_CppLanguage.props" />
 </Project>
