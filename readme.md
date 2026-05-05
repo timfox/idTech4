@@ -116,3 +116,7 @@ The long-term goal is to allow older games and engines to take advantage of mode
 ## Related: RBDOOM-3-BFG
 
 Merging [RBDOOM-3-BFG](https://github.com/RobertBeckebans/RBDOOM-3-BFG) is not a single patch: it targets **Doom 3 BFG** with **NVRHI** (Vulkan + D3D12), while this fork is **classic Doom 3** with **IceBridge (GL on D3D12) + DXR**. See [docs/RBDOOM-3-BFG-PORTING.md](docs/RBDOOM-3-BFG-PORTING.md) for a feature map, merge reality, and phased port strategies (CMake/SDL vs NVRHI vs cherry-picks).
+
+## id Tech 5–style engineering (no MegaTextures)
+
+Useful **id Tech 5–era directions** for this codebase—**multi-core–friendly work**, **streaming I/O**, **GPU-first RHI**, **memory and frame budgets**—are outlined without **virtual texturing / MegaTextures** in [docs/IDTECH5_ASPECTS_NO_MEGATEXTURES.md](docs/IDTECH5_ASPECTS_NO_MEGATEXTURES.md), mapped to existing files (`FileSystem`, renderer images, IceBridge/Vulkan).
