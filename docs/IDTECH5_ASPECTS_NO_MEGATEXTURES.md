@@ -13,6 +13,7 @@ This document names **aspects of id Tech 5’s engineering direction** that are 
 | **GPU-first API usage** | Command recording, heaps, barriers, async queues where it wins. | **IceBridge on D3D12** already sits here; **Vulkan RHI** work (`r_icebridgeRHI`, `vkInfo`, `tools/vulkan_caps`) is the portable counterpart. |
 | **Frame and memory budgets** | Bounded frame cost; reclaim or LOD before you hitch. | Tune **image purge**, **preload**, **texture quality** CVars and renderer budgets; document “Deck-safe” defaults (see [VULKAN_PLATFORM_STEAMDECK.md](VULKAN_PLATFORM_STEAMDECK.md)). |
 | **Deterministic failure modes** | If a resource is missing, degrade clearly. | Preserve **idFileSystem** search order and **pak override** semantics; extend logging and optional **async read** error surfaces where new code is added. |
+| **Offline optimization + 2D CSG** | id Tech 5’s stack included **AMPL** and **Clipper** alongside C++ for tools—not inside every frame of the retail game. | This fork ships **`tools/ampl_clipper/`**: sample **GNU MathProg** `.mod` files (AMPL-compatible subset) plus **Clipper2** (Angus Johnson) for boolean polygon ops—see [tools/ampl_clipper/README.md](../tools/ampl_clipper/README.md). |
 
 ---
 
