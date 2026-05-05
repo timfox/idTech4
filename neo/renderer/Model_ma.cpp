@@ -51,6 +51,18 @@ typedef struct {
 
 static ma_t maGlobal;
 
+/*
+================
+MA_SkipUtf8Bom
+Some tools save Maya ASCII with a UTF-8 BOM; idLexer would otherwise treat it as garbage before the first keyword.
+================
+*/
+static const char *MA_SkipUtf8Bom( const char *buffer ) {
+	if ( buffer && (unsigned char)buffer[0] == 0xEF && (unsigned char)buffer[1] == 0xBB && (unsigned char)buffer[2] == 0xBF ) {
+		return buffer + 3;
+	}
+	return buffer;
+}
 
 void MA_ParseNodeHeader(idParser& parser, maNodeHeader_t* header) {
 
@@ -973,9 +985,11 @@ maModel_t *MA_Parse( const char *buffer, const char* filename, bool verbose ) {
 	maGlobal.model->materials.Resize( 32, 32 );
 	
 
+	const char *text = MA_SkipUtf8Bom( buffer );
+
 	idParser parser;
 	parser.SetFlags(LEXFL_NOSTRINGCONCAT);
-	parser.LoadMemory(buffer, strlen(buffer), filename);
+	parser.LoadMemory( text, strlen( text ), filename );
 
 	idToken token;
 	while(parser.ReadToken(&token)) {
