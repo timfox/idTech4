@@ -1,0 +1,67 @@
+# Cross-platform smoke checks (no full MSVC game build on Linux/macOS runners).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  vulkan-tools:
+    name: Vulkan probes (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            cxx: g++
+          - os: macos-latest
+            cxx: clang++
+          - os: windows-latest
+            cxx: cl
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build and run (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        env:
+          CI: true
+        run: |
+          set -euo pipefail
+          make -C tools/vulkan_caps clean all CXX="${{ matrix.cxx }}"
+          make -C tools/vulkanrt_caps clean all CXX="${{ matrix.cxx }}"
+          ./tools/vulkan_caps/vulkan_caps
+          ./tools/vulkanrt_caps/vulkanrt_caps
+
+      - name: MSVC environment (Windows)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Build and run (Windows MSVC)
+        if: runner.os == 'Windows'
+        shell: cmd
+        env:
+          CI: true
+        run: |
+          cd tools\vulkan_caps
+          if exist vulkan_caps.exe del vulkan_caps.exe
+          cl /nologo /EHsc /O2 /W3 /Fe:vulkan_caps.exe main.cpp
+          if errorlevel 1 exit /b 1
+          vulkan_caps.exe
+          if errorlevel 1 exit /b 1
+          cd ..\vulkanrt_caps
+          if exist vulkanrt_caps.exe del vulkanrt_caps.exe
+          cl /nologo /EHsc /O2 /W3 /Fe:vulkanrt_caps.exe main.cpp
+          if errorlevel 1 exit /b 1
+          vulkanrt_caps.exe
+          if errorlevel 1 exit /b 1
