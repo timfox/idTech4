@@ -507,7 +507,9 @@ void Posix_PollInput() {
 Sys_ShutdownInput
 =================
 */
-void Sys_ShutdownInput( void ) { }
+void Sys_ShutdownInput( void ) {
+	Sys_ShutdownJoystickFill();
+}
 
 /*
 ===============

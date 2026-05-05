@@ -22,6 +22,8 @@ Quick **Vulkan driver / extension check** (Linux, `libvulkan.so.1`):
 make -C tools/vulkan_caps && ./tools/vulkan_caps/vulkan_caps
 ```
 
+**Gamepad / Deck sticks (Linux joydev):** see [docs/STEAMDECK_CONTROLS.md](docs/STEAMDECK_CONTROLS.md) (`in_joydev`, axis mapping, `in_joyLookScale`).
+
 ## What Is IceBridge?
 
 **IceBridge** is a compatibility and modernization renderer layer for older engines.

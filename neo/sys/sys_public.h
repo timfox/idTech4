@@ -357,6 +357,10 @@ int				Sys_PollMouseInputEvents( void );
 int				Sys_ReturnMouseInputEvent( const int n, int &action, int &value );
 void			Sys_EndMouseInputEvents( void );
 
+// optional gamepad axis sampling (Linux joydev / Steam Deck); fills engine joystickAxis[]
+void			Sys_FillJoystickAxes( int *axes, int numAxes );
+void			Sys_ShutdownJoystickFill( void );
+
 // when the console is down, or the game is about to perform a lengthy
 // operation like map loading, the system can release the mouse cursor
 // when in windowed mode
