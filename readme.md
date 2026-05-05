@@ -27,6 +27,14 @@ To run the game you still need **legal Doom 3 game data** (for example `base/pak
 
 The D3D12-backed GL path is wired through the **`opengl`** project and helpers such as [`neo/opengl/gl_d3d12wgl.cpp`](neo/opengl/gl_d3d12wgl.cpp); renderer initialization touches code like [`neo/renderer/RenderSystem_init.cpp`](neo/renderer/RenderSystem_init.cpp).
 
+### Multithreaded CPU texture jobs
+
+Large **CPU-side** texture work (**resample**, **dropsample**, **2D mipmaps** in `Image_process.cpp`) can split **output rows** across **`std::thread`** workers via [`neo/idlib/ParallelJob.cpp`](neo/idlib/ParallelJob.cpp). This does not change the render backend threading model; it speeds loading and mip generation on multi-core hosts.
+
+- **`r_parallelImageJobs`** (default **1**) — enable parallel row jobs.
+- **`r_parallelImageMinRows`** (default **64**) — minimum output height before using threads.
+- **`r_parallelImageMaxThreads`** (default **0** = auto, hard cap 32).
+
 ## Linux / Steam Deck and Vulkan (raster)
 
 **Steam Deck** does not offer practical **hardware ray tracing** for this engine’s DXR-style path. Portable work should prioritize **Vulkan raster** (swapchain, passes, post), **asset and pak loading**, and **media** (see [docs/VULKAN_PLATFORM_STEAMDECK.md](docs/VULKAN_PLATFORM_STEAMDECK.md)).

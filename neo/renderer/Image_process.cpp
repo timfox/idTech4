@@ -30,6 +30,89 @@ If you have questions concerning this license or the applicable additional terms
 
 #include "tr_local.h"
 
+namespace {
+
+static idParallelDispatchParms R_ImageJobParms( void ) {
+	idParallelDispatchParms p;
+	p.enabled = r_parallelImageJobs.GetBool();
+	p.minRowsForParallel = idMath::ClampInt( 8, 4096, r_parallelImageMinRows.GetInteger() );
+	p.maxThreads = idMath::ClampInt( 0, 32, r_parallelImageMaxThreads.GetInteger() );
+	return p;
+}
+
+struct resampleRowCtx_t {
+	const byte *	in;
+	const unsigned *p1;
+	const unsigned *p2;
+	byte *			out;
+	int				inwidth;
+	int				inheight;
+	int				outwidth;
+	int				outheight;
+};
+
+static void R_ResampleTextureRow( void *vctx, int i ) {
+	resampleRowCtx_t *ctx = (resampleRowCtx_t *)vctx;
+	byte *out_p = ctx->out + i * ctx->outwidth * 4;
+	const byte *inrow = ctx->in + 4 * ctx->inwidth * (int)( ( i + 0.25f ) * ctx->inheight / ctx->outheight );
+	const byte *inrow2 = ctx->in + 4 * ctx->inwidth * (int)( ( i + 0.75f ) * ctx->inheight / ctx->outheight );
+	for ( int j = 0; j < ctx->outwidth; j++ ) {
+		const byte *pix1 = inrow + ctx->p1[j];
+		const byte *pix2 = inrow + ctx->p2[j];
+		const byte *pix3 = inrow2 + ctx->p1[j];
+		const byte *pix4 = inrow2 + ctx->p2[j];
+		out_p[j*4+0] = (pix1[0] + pix2[0] + pix3[0] + pix4[0])>>2;
+		out_p[j*4+1] = (pix1[1] + pix2[1] + pix3[1] + pix4[1])>>2;
+		out_p[j*4+2] = (pix1[2] + pix2[2] + pix3[2] + pix4[2])>>2;
+		out_p[j*4+3] = (pix1[3] + pix2[3] + pix3[3] + pix4[3])>>2;
+	}
+}
+
+struct dropsampleRowCtx_t {
+	const byte *	in;
+	byte *			out;
+	int				inwidth;
+	int				inheight;
+	int				outwidth;
+	int				outheight;
+};
+
+static void R_DropsampleRow( void *vctx, int i ) {
+	dropsampleRowCtx_t *ctx = (dropsampleRowCtx_t *)vctx;
+	byte *out_p = ctx->out + i * ctx->outwidth * 4;
+	const byte *inrow = ctx->in + 4 * ctx->inwidth * (int)((i+0.25)*ctx->inheight/ctx->outheight);
+	for ( int j = 0; j < ctx->outwidth; j++ ) {
+		int k = j * ctx->inwidth / ctx->outwidth;
+		const byte *pix1 = inrow + k * 4;
+		out_p[j*4+0] = pix1[0];
+		out_p[j*4+1] = pix1[1];
+		out_p[j*4+2] = pix1[2];
+		out_p[j*4+3] = pix1[3];
+	}
+}
+
+struct mipmapRowCtx_t {
+	const byte *	in0;
+	byte *			out0;
+	int				srcRowStride;
+	int				dstRowStride;
+	int				dstWidth;
+};
+
+static void R_MipMapRow( void *vctx, int i ) {
+	mipmapRowCtx_t *ctx = (mipmapRowCtx_t *)vctx;
+	const byte *in_p = ctx->in0 + i * ctx->srcRowStride;
+	byte *out_p = ctx->out0 + i * ctx->dstRowStride;
+	for ( int j = 0; j < ctx->dstWidth; j++, out_p += 4, in_p += 8 ) {
+		out_p[0] = (in_p[0] + in_p[4] + in_p[ctx->srcRowStride+0] + in_p[ctx->srcRowStride+4])>>2;
+		out_p[1] = (in_p[1] + in_p[5] + in_p[ctx->srcRowStride+1] + in_p[ctx->srcRowStride+5])>>2;
+		out_p[2] = (in_p[2] + in_p[6] + in_p[ctx->srcRowStride+2] + in_p[ctx->srcRowStride+6])>>2;
+		out_p[3] = (in_p[3] + in_p[7] + in_p[ctx->srcRowStride+3] + in_p[ctx->srcRowStride+7])>>2;
+	}
+}
+
+} // namespace
+
 /*
 ================
 R_ResampleTexture
@@ -76,21 +159,17 @@ byte *R_ResampleTexture( const byte *in, int inwidth, int inheight,
 		frac += fracstep;
 	}
 
-	for (i=0 ; i<outheight ; i++, out_p += outwidth*4 ) {
-		inrow = in + 4 * inwidth * (int)( ( i + 0.25f ) * inheight / outheight );
-		inrow2 = in + 4 * inwidth * (int)( ( i + 0.75f ) * inheight / outheight );
-		frac = fracstep >> 1;
-		for (j=0 ; j<outwidth ; j++) {
-			pix1 = inrow + p1[j];
-			pix2 = inrow + p2[j];
-			pix3 = inrow2 + p1[j];
-			pix4 = inrow2 + p2[j];
-			out_p[j*4+0] = (pix1[0] + pix2[0] + pix3[0] + pix4[0])>>2;
-			out_p[j*4+1] = (pix1[1] + pix2[1] + pix3[1] + pix4[1])>>2;
-			out_p[j*4+2] = (pix1[2] + pix2[2] + pix3[2] + pix4[2])>>2;
-			out_p[j*4+3] = (pix1[3] + pix2[3] + pix3[3] + pix4[3])>>2;
-		}
-	}
+	resampleRowCtx_t rctx;
+	rctx.in = in;
+	rctx.p1 = p1;
+	rctx.p2 = p2;
+	rctx.out = out;
+	rctx.inwidth = inwidth;
+	rctx.inheight = inheight;
+	rctx.outwidth = outwidth;
+	rctx.outheight = outheight;
+	idParallelDispatchParms jp = R_ImageJobParms();
+	idParallelForRows( 0, outheight, R_ResampleTextureRow, &rctx, &jp );
 
 	return out;
 }
@@ -113,17 +192,15 @@ byte *R_Dropsample( const byte *in, int inwidth, int inheight,
 	out = (byte *)R_StaticAlloc( outwidth * outheight * 4 );
 	out_p = out;
 
-	for (i=0 ; i<outheight ; i++, out_p += outwidth*4 ) {
-		inrow = in + 4*inwidth*(int)((i+0.25)*inheight/outheight);
-		for (j=0 ; j<outwidth ; j++) {
-			k = j * inwidth / outwidth;
-			pix1 = inrow + k * 4;
-			out_p[j*4+0] = pix1[0];
-			out_p[j*4+1] = pix1[1];
-			out_p[j*4+2] = pix1[2];
-			out_p[j*4+3] = pix1[3];
-		}
-	}
+	dropsampleRowCtx_t dctx;
+	dctx.in = in;
+	dctx.out = out;
+	dctx.inwidth = inwidth;
+	dctx.inheight = inheight;
+	dctx.outwidth = outwidth;
+	dctx.outheight = outheight;
+	idParallelDispatchParms jp = R_ImageJobParms();
+	idParallelForRows( 0, outheight, R_DropsampleRow, &dctx, &jp );
 
 	return out;
 }
@@ -448,14 +525,14 @@ byte *R_MipMap( const byte *in, int width, int height, bool preserveBorder ) {
 		return out;
 	}
 
-	for (i=0 ; i<height ; i++, in_p+=row) {
-		for (j=0 ; j<width ; j++, out_p+=4, in_p+=8) {
-			out_p[0] = (in_p[0] + in_p[4] + in_p[row+0] + in_p[row+4])>>2;
-			out_p[1] = (in_p[1] + in_p[5] + in_p[row+1] + in_p[row+5])>>2;
-			out_p[2] = (in_p[2] + in_p[6] + in_p[row+2] + in_p[row+6])>>2;
-			out_p[3] = (in_p[3] + in_p[7] + in_p[row+3] + in_p[row+7])>>2;
-		}
-	}
+	mipmapRowCtx_t mctx;
+	mctx.in0 = in_p;
+	mctx.out0 = out_p;
+	mctx.srcRowStride = row;
+	mctx.dstRowStride = width * 4;
+	mctx.dstWidth = width;
+	idParallelDispatchParms jp = R_ImageJobParms();
+	idParallelForRows( 0, height, R_MipMapRow, &mctx, &jp );
 
 	// copy the old border texel back around if desired
 	if ( preserveBorder ) {
@@ -529,7 +606,7 @@ byte *R_MipMap3D( const byte *in, int width, int height, int depth, bool preserv
 					in_p[plane+2] + in_p[plane+6] + in_p[plane+row+2] + in_p[plane+row+6]
 					)>>3;
 				out_p[3] = (in_p[3] + in_p[7] + in_p[row+3] + in_p[row+7] +
-					in_p[plane+3] + in_p[plane+6] + in_p[plane+row+3] + in_p[plane+row+6]
+					in_p[plane+3] + in_p[plane+7] + in_p[plane+row+3] + in_p[plane+row+7]
 					)>>3;
 			}
 		}
