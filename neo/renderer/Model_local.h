@@ -197,6 +197,48 @@ private:
 /*
 ===============================================================================
 
+	GlTF 2.0 (JSON or .glb) — static triangle mesh + optional morph targets
+
+	Morph weights: renderEntity.shaderParms[ SHADERPARM_GLTF_MORPH0 .. MORPH3 ] (see RenderWorld.h).
+
+===============================================================================
+*/
+
+class idRenderModelGlTF : public idRenderModelStatic {
+public:
+	virtual void				InitFromFile( const char *fileName );
+	virtual void				LoadModel();
+	virtual void				PurgeModel();
+	virtual void				TouchData();
+	virtual dynamicModel_t		IsDynamicModel() const;
+	virtual idRenderModel *		InstantiateDynamicModel( const struct renderEntity_s *ent, const struct viewDef_s *view, idRenderModel *cachedModel );
+	virtual idBounds			Bounds( const struct renderEntity_s *ent ) const;
+	virtual void				Print() const;
+	virtual void				List() const;
+	virtual int					Memory() const;
+
+private:
+	struct gltfMorphTarget_t {
+		idList<idVec3>			positionDeltas;	// same length as baseVerts (per-vertex delta)
+	};
+
+	struct gltfMeshData_t {
+		idStr					materialName;
+		idList<idDrawVert>		baseVerts;
+		idList<int>				indices;
+		idList<gltfMorphTarget_t> morphTargets;
+	};
+
+	idList<gltfMeshData_t>		meshes;
+
+	bool						LoadFromBuffer( const byte *data, int len, const char *pathForErrors );
+	void						BuildMeshSurface( const gltfMeshData_t &mesh, const float *morphWeights, int numMorphWeights, modelSurface_t *surf ) const;
+	idBounds					CalcDeformedBounds( const float *morphWeights, int numMorphWeights ) const;
+};
+
+/*
+===============================================================================
+
 	MD3 animated model
 
 ===============================================================================

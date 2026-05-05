@@ -107,6 +107,7 @@ renderer_string = ' \
 	Model_ma.cpp \
 	Model_md3.cpp \
 	Model_md5.cpp \
+	Model_glTF.cpp \
 	Model_prt.cpp \
 	Model_sprite.cpp \
 	RenderEntity.cpp \
