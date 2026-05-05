@@ -142,6 +142,9 @@ idCVar g_showTestModelFrame(		"g_showTestModelFrame",		"0",			CVAR_GAME | CVAR_B
 idCVar g_showActiveEntities(		"g_showActiveEntities",		"0",			CVAR_GAME | CVAR_BOOL, "draws boxes around thinking entities.  dormant entities (outside of pvs) are drawn yellow.  non-dormant are green." );
 idCVar g_showEnemies(				"g_showEnemies",			"0",			CVAR_GAME | CVAR_BOOL, "draws boxes around monsters that have targeted the the player" );
 
+idCVar g_districtSpreadVerbose(		"g_districtSpreadVerbose",	"0",			CVAR_GAME | CVAR_BOOL, "log when SpreadLocations replaces a location (info_location) for an area" );
+idCVar g_districtHudDistrict(		"g_districtHudDistrict",	"0",			CVAR_GAME | CVAR_ARCHIVE | CVAR_BOOL, "when 1, HUD state 'location_district' is set from info_location spawn key \"district\"" );
+
 idCVar g_frametime(					"g_frametime",				"0",			CVAR_GAME | CVAR_BOOL, "displays timing information for each game frame" );
 idCVar g_timeentities(				"g_timeEntities",			"0",			CVAR_GAME | CVAR_FLOAT, "when non-zero, shows entities whose think functions exceeded the # of milliseconds specified" );
 	

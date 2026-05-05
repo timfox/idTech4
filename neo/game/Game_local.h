@@ -449,7 +449,8 @@ public:
 
 	idPlayer *				GetLocalPlayer() const;
 
-	void					SpreadLocations();
+	void					SpreadLocations( bool verbose = false );
+	void					SpreadLocationsDebug( void );	// console: re-run SpreadLocations with overlap reporting
 	idLocationEntity *		LocationForPoint( const idVec3 &point );	// May return NULL
 	idEntity *				SelectInitialSpawnPoint( idPlayer *player );
 

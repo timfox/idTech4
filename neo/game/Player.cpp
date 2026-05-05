@@ -4294,8 +4294,15 @@ void idPlayer::UpdateLocation( void ) {
 		idLocationEntity *locationEntity = gameLocal.LocationForPoint( GetEyePosition() );
 		if ( locationEntity ) {
 			hud->SetStateString( "location", locationEntity->GetLocation() );
+			if ( g_districtHudDistrict.GetBool() ) {
+				const char *dist = locationEntity->GetDistrict();
+				hud->SetStateString( "location_district", dist && dist[0] ? dist : "" );
+			} else {
+				hud->SetStateString( "location_district", "" );
+			}
 		} else {
 			hud->SetStateString( "location", common->GetLanguageDict()->GetString( "#str_02911" ) );
+			hud->SetStateString( "location_district", "" );
 		}
 	}
 }

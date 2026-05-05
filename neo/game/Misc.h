@@ -453,6 +453,8 @@ public:
 	void				Spawn( void );
 
 	const char *		GetLocation( void ) const;
+	const char *		GetDistrict( void ) const;
+	int					GetLocationPriority( void ) const;
 
 private:
 };

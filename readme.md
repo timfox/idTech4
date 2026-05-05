@@ -120,3 +120,7 @@ Merging [RBDOOM-3-BFG](https://github.com/RobertBeckebans/RBDOOM-3-BFG) is not a
 ## id Tech 5–style engineering (no MegaTextures)
 
 Useful **id Tech 5–era directions** for this codebase—**multi-core–friendly work**, **streaming I/O**, **GPU-first RHI**, **memory and frame budgets**—are outlined without **virtual texturing / MegaTextures** in [docs/IDTECH5_ASPECTS_NO_MEGATEXTURES.md](docs/IDTECH5_ASPECTS_NO_MEGATEXTURES.md), mapped to existing files (`FileSystem`, renderer images, IceBridge/Vulkan).
+
+## Map districts (`info_location`)
+
+HUD **area names** and optional **district** grouping for `info_location` / `location_separator` are documented in [docs/DISTRICT_SYSTEM.md](docs/DISTRICT_SYSTEM.md) (priority overlap, CVars, console commands).

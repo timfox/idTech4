@@ -81,6 +81,9 @@ extern idCVar	g_showTestModelFrame;
 extern idCVar	g_showActiveEntities;
 extern idCVar	g_showEnemies;
 
+extern idCVar	g_districtSpreadVerbose;
+extern idCVar	g_districtHudDistrict;
+
 extern idCVar	g_frametime;
 extern idCVar	g_timeentities;
 

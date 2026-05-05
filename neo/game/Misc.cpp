@@ -2006,11 +2006,13 @@ idLocationSeparatorEntity::Spawn
 */
 void idLocationSeparatorEntity::Spawn() {
 	idBounds b;
+	qhandle_t portal;
 
 	b = idBounds( spawnArgs.GetVector( "origin" ) ).Expand( 16 );
-	qhandle_t portal = gameRenderWorld->FindPortal( b );
+	portal = gameRenderWorld->FindPortal( b );
 	if ( !portal ) {
 		gameLocal.Warning( "LocationSeparator '%s' didn't contact a portal", spawnArgs.GetString( "name" ) );
+		return;
 	}
 	gameLocal.SetPortalState( portal, PS_BLOCK_LOCATION );
 }
@@ -2080,6 +2082,27 @@ idLocationEntity::GetLocation
 */
 const char *idLocationEntity::GetLocation( void ) const {
 	return spawnArgs.GetString( "location" );
+}
+
+/*
+======================
+idLocationEntity::GetDistrict
+Optional grouping label for HUD / scripts (spawn key "district").
+======================
+*/
+const char *idLocationEntity::GetDistrict( void ) const {
+	return spawnArgs.GetString( "district" );
+}
+
+/*
+======================
+idLocationEntity::GetLocationPriority
+Larger wins when multiple info_location volumes compete for the same area.
+Default 0. Use "locationPriority" on the entity.
+======================
+*/
+int idLocationEntity::GetLocationPriority( void ) const {
+	return spawnArgs.GetInt( "locationPriority", "0" );
 }
 
 /*

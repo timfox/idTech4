@@ -616,6 +616,86 @@ static void Cmd_AddChatLine_f( const idCmdArgs &args ) {
 
 /*
 ==================
+Cmd_LocationInfo_f — HUD district / info_location at a point
+==================
+*/
+static void Cmd_LocationInfo_f( const idCmdArgs &args ) {
+	idVec3 pt;
+
+	if ( !gameLocal.GetLocalPlayer() ) {
+		gameLocal.Printf( "locationInfo: no local player\n" );
+		return;
+	}
+	if ( !gameRenderWorld || gameLocal.GetMapName()[0] == '\0' ) {
+		gameLocal.Printf( "locationInfo: no map loaded\n" );
+		return;
+	}
+
+	if ( args.Argc() >= 4 ) {
+		pt.x = (float)atof( args.Argv( 1 ) );
+		pt.y = (float)atof( args.Argv( 2 ) );
+		pt.z = (float)atof( args.Argv( 3 ) );
+	} else {
+		pt = gameLocal.GetLocalPlayer()->GetEyePosition();
+	}
+
+	idLocationEntity *loc = gameLocal.LocationForPoint( pt );
+	int area = gameRenderWorld->PointInArea( pt );
+	gameLocal.Printf( "locationInfo: point (%s) area %i\n", pt.ToString(), area );
+	if ( !loc ) {
+		gameLocal.Printf( "  (no info_location for this area — default HUD string)\n" );
+		return;
+	}
+	gameLocal.Printf( "  location: \"%s\"\n", loc->GetLocation() );
+	const char *dist = loc->GetDistrict();
+	gameLocal.Printf( "  district: \"%s\"\n", ( dist && dist[0] ) ? dist : "" );
+	gameLocal.Printf( "  locationPriority: %i  entity: %s\n", loc->GetLocationPriority(), loc->name.c_str() );
+}
+
+/*
+==================
+Cmd_ListLocationEntities_f
+==================
+*/
+static void Cmd_ListLocationEntities_f( const idCmdArgs &args ) {
+	(void)args;
+	int n = 0;
+
+	if ( !gameLocal.GetMapName()[0] ) {
+		gameLocal.Printf( "listLocationEntities: no map loaded\n" );
+		return;
+	}
+
+	gameLocal.Printf( "info_location entities (name, location, district, priority, origin):\n" );
+	for ( idEntity *ent = gameLocal.spawnedEntities.Next(); ent != NULL; ent = ent->spawnNode.Next() ) {
+		if ( !ent->IsType( idLocationEntity::Type ) ) {
+			continue;
+		}
+		idLocationEntity *loc = static_cast<idLocationEntity *>( ent );
+		const idVec3 org = loc->spawnArgs.GetVector( "origin" );
+		gameLocal.Printf( "  %-24s  \"%s\"  district=\"%s\"  pri=%i  (%s)\n",
+			loc->name.c_str(), loc->GetLocation(), loc->GetDistrict(), loc->GetLocationPriority(), org.ToString() );
+		n++;
+	}
+	gameLocal.Printf( "Total: %i\n", n );
+}
+
+/*
+==================
+Cmd_SpreadLocationsDebug_f — rebuild area→location table with overlap log
+==================
+*/
+static void Cmd_SpreadLocationsDebug_f( const idCmdArgs &args ) {
+	(void)args;
+	if ( !gameRenderWorld || gameLocal.GetMapName()[0] == '\0' ) {
+		gameLocal.Printf( "spreadLocationsDebug: no map loaded\n" );
+		return;
+	}
+	gameLocal.SpreadLocationsDebug();
+}
+
+/*
+==================
 Cmd_Kick_f
 ==================
 */
@@ -2311,6 +2391,9 @@ void idGameLocal::InitConsoleCommands( void ) {
 	cmdSystem->AddCommand( "kill",					Cmd_Kill_f,					CMD_FL_GAME,				"kills the player" );
 	cmdSystem->AddCommand( "where",					Cmd_GetViewpos_f,			CMD_FL_GAME|CMD_FL_CHEAT,	"prints the current view position" );
 	cmdSystem->AddCommand( "getviewpos",			Cmd_GetViewpos_f,			CMD_FL_GAME|CMD_FL_CHEAT,	"prints the current view position" );
+	cmdSystem->AddCommand( "locationInfo",			Cmd_LocationInfo_f,			CMD_FL_GAME|CMD_FL_CHEAT,	"print HUD location/district for eye or optional x y z" );
+	cmdSystem->AddCommand( "listLocationEntities",	Cmd_ListLocationEntities_f,	CMD_FL_GAME|CMD_FL_CHEAT,	"list all info_location entities and district spawn keys" );
+	cmdSystem->AddCommand( "spreadLocationsDebug",	Cmd_SpreadLocationsDebug_f,	CMD_FL_GAME|CMD_FL_CHEAT,	"rebuild location area table; log overlaps (see g_districtSpreadVerbose)" );
 	cmdSystem->AddCommand( "setviewpos",			Cmd_SetViewpos_f,			CMD_FL_GAME|CMD_FL_CHEAT,	"sets the current view position" );
 	cmdSystem->AddCommand( "teleport",				Cmd_Teleport_f,				CMD_FL_GAME|CMD_FL_CHEAT,	"teleports the player to an entity location", idGameLocal::ArgCompletion_EntityName );
 	cmdSystem->AddCommand( "trigger",				Cmd_Trigger_f,				CMD_FL_GAME|CMD_FL_CHEAT,	"triggers an entity", idGameLocal::ArgCompletion_EntityName );

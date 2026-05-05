@@ -1135,7 +1135,7 @@ void idGameLocal::MapPopulate( void ) {
 	SpawnMapEntities();
 
 	// mark location entities in all connected areas
-	SpreadLocations();
+	SpreadLocations( false );
 
 	// prepare the list of randomized initial spawn spots
 	RandomizeInitialSpawns();
@@ -3978,45 +3978,113 @@ idGameLocal::SpreadLocations
 Now that everything has been spawned, associate areas with location entities
 ======================
 */
-void idGameLocal::SpreadLocations() {
-	idEntity *ent;
+namespace {
+
+struct spreadLocCandidate_t {
+	idLocationEntity *	ent;
+	int					priority;
+	int					entityNumber;
+};
+
+static int SpreadLocCandidateCmp( const spreadLocCandidate_t *a, const spreadLocCandidate_t *b ) {
+	if ( a->priority != b->priority ) {
+		return b->priority - a->priority;	// higher priority first
+	}
+	return a->entityNumber - b->entityNumber;	// stable tie-break
+}
+
+static void SpreadAssignArea( idLocationEntity **locationEntities, int numAreas, int areaIndex, idLocationEntity *candidate,
+		bool verbose, const char *contextLabel ) {
+	if ( areaIndex < 0 || areaIndex >= numAreas ) {
+		return;
+	}
+	idLocationEntity *existing = locationEntities[areaIndex ];
+	if ( existing == candidate ) {
+		return;
+	}
+	if ( !existing ) {
+		locationEntities[areaIndex ] = candidate;
+		return;
+	}
+	const int oldPri = existing->GetLocationPriority();
+	const int newPri = candidate->GetLocationPriority();
+	if ( newPri > oldPri || ( newPri == oldPri && candidate->entityNumber < existing->entityNumber ) ) {
+		if ( verbose || g_districtSpreadVerbose.GetBool() ) {
+			gameLocal.Printf( "SpreadLocations%s: area %i '%s' -> '%s' (priority %i over %i)\n", contextLabel, areaIndex,
+				existing->spawnArgs.GetString( "name" ), candidate->spawnArgs.GetString( "name" ), newPri, oldPri );
+		}
+		locationEntities[areaIndex ] = candidate;
+	}
+}
+
+} // namespace
+
+void idGameLocal::SpreadLocations( bool verbose ) {
+	idList<spreadLocCandidate_t> candidates;
+	int i;
 
 	// allocate the area table
 	int	numAreas = gameRenderWorld->NumAreas();
+	delete[] locationEntities;
 	locationEntities = new idLocationEntity *[ numAreas ];
 	memset( locationEntities, 0, numAreas * sizeof( *locationEntities ) );
 
-	// for each location entity, make pointers from every area it touches
-	for( ent = spawnedEntities.Next(); ent != NULL; ent = ent->spawnNode.Next() ) {
+	for( idEntity *ent = spawnedEntities.Next(); ent != NULL; ent = ent->spawnNode.Next() ) {
 		if ( !ent->IsType( idLocationEntity::Type ) ) {
 			continue;
 		}
-		idVec3	point = ent->spawnArgs.GetVector( "origin" );
+		idLocationEntity *loc = static_cast<idLocationEntity *>( ent );
+		idVec3	point = loc->spawnArgs.GetVector( "origin" );
 		int areaNum = gameRenderWorld->PointInArea( point );
 		if ( areaNum < 0 ) {
-			Printf( "SpreadLocations: location '%s' is not in a valid area\n", ent->spawnArgs.GetString( "name" ) );
+			Printf( "SpreadLocations: location '%s' is not in a valid area\n", loc->spawnArgs.GetString( "name" ) );
 			continue;
 		}
 		if ( areaNum >= numAreas ) {
 			Error( "idGameLocal::SpreadLocations: areaNum >= gameRenderWorld->NumAreas()" );
 		}
-		if ( locationEntities[areaNum] ) {
-			Warning( "location entity '%s' overlaps '%s'", ent->spawnArgs.GetString( "name" ),
-				locationEntities[areaNum]->spawnArgs.GetString( "name" ) );
+		spreadLocCandidate_t c;
+		c.ent = loc;
+		c.priority = loc->GetLocationPriority();
+		c.entityNumber = loc->entityNumber;
+		candidates.Append( c );
+	}
+
+	candidates.Sort( ( idList<spreadLocCandidate_t>::cmp_t * )SpreadLocCandidateCmp );
+
+	for ( i = 0; i < candidates.Num(); i++ ) {
+		idLocationEntity *loc = candidates[i].ent;
+		idVec3	point = loc->spawnArgs.GetVector( "origin" );
+		int areaNum = gameRenderWorld->PointInArea( point );
+		if ( areaNum < 0 ) {
 			continue;
 		}
-		locationEntities[areaNum] = static_cast<idLocationEntity *>(ent);
 
-		// spread to all other connected areas
-		for ( int i = 0 ; i < numAreas ; i++ ) {
-			if ( i == areaNum ) {
+		SpreadAssignArea( locationEntities, numAreas, areaNum, loc, verbose, "" );
+
+		for ( int a = 0 ; a < numAreas ; a++ ) {
+			if ( a == areaNum ) {
 				continue;
 			}
-			if ( gameRenderWorld->AreasAreConnected( areaNum, i, PS_BLOCK_LOCATION ) ) {
-				locationEntities[i] = static_cast<idLocationEntity *>(ent);
+			if ( gameRenderWorld->AreasAreConnected( areaNum, a, PS_BLOCK_LOCATION ) ) {
+				SpreadAssignArea( locationEntities, numAreas, a, loc, verbose, "" );
 			}
 		}
 	}
+}
+
+/*
+======================
+idGameLocal::SpreadLocationsDebug
+======================
+*/
+void idGameLocal::SpreadLocationsDebug( void ) {
+	if ( !gameRenderWorld ) {
+		Printf( "SpreadLocationsDebug: no render world\n" );
+		return;
+	}
+	SpreadLocations( true );
+	Printf( "SpreadLocationsDebug: rebuilt district table (%i areas)\n", gameRenderWorld->NumAreas() );
 }
 
 /*
