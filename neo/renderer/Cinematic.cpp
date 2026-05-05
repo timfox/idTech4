@@ -30,6 +30,7 @@ If you have questions concerning this license or the applicable additional terms
 #pragma hdrstop
 
 #include "tr_local.h"
+#include "CinematicFFmpeg.h"
 
 #define LittleInt(x) x
 #define CIN_system	1
@@ -137,7 +138,63 @@ static unsigned short* vq2 = NULL;
 static unsigned short* vq4 = NULL;
 static unsigned short* vq8 = NULL;
 
+/*
+===============================================================================
+idCinematicDispatch — try ROQ first, then FFmpeg (when built with FFmpeg).
+===============================================================================
+*/
+class idCinematicDispatch : public idCinematic {
+public:
+	idCinematicDispatch() {
+		impl = NULL;
+	}
+	virtual ~idCinematicDispatch() {
+		// Must release impl here; after this dtor the base ~idCinematic would not dispatch to us.
+		Close();
+	}
+	virtual bool InitFromFile( const char *qpath, bool looping ) {
+		Close();
+		idCinematicLocal *roq = new idCinematicLocal();
+		if ( roq->InitFromFile( qpath, looping ) ) {
+			impl = roq;
+			return true;
+		}
+		delete roq;
+		idCinematicFFmpeg *ff = new idCinematicFFmpeg();
+		if ( ff->InitFromFile( qpath, looping ) ) {
+			impl = ff;
+			return true;
+		}
+		delete ff;
+		impl = NULL;
+		return false;
+	}
+	virtual int AnimationLength() {
+		return impl ? impl->AnimationLength() : 0;
+	}
+	virtual cinData_t ImageForTime( int milliseconds ) {
+		if ( impl ) {
+			return impl->ImageForTime( milliseconds );
+		}
+		cinData_t c;
+		memset( &c, 0, sizeof( c ) );
+		return c;
+	}
+	virtual void Close() {
+		if ( impl ) {
+			delete impl;
+			impl = NULL;
+		}
+	}
+	virtual void ResetTime( int time ) {
+		if ( impl ) {
+			impl->ResetTime( time );
+		}
+	}
 
+private:
+	idCinematic *impl;
+};
 
 //===========================================
 
@@ -193,7 +250,7 @@ idCinematicLocal::Alloc
 ==============
 */
 idCinematic* idCinematic::Alloc() {
-	return new idCinematicLocal;
+	return new idCinematicDispatch;
 }
 
 /*
