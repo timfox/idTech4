@@ -49,9 +49,10 @@ Or set **`in_joy_autoexec_profile 1`** (archive) so the engine **queues `exec st
 
 ## Tuning on Deck
 
-1. If the left stick does nothing, run `jstest /dev/input/js0` (or `evtest`) and set **`in_joy_axis*`** to match your device’s axis order.  
-2. If look is too fast or inverted, adjust **`in_joyLookScale`** or swap **`in_joy_axisLookPitch`** with another axis index.  
-3. If you use a different node (e.g. `js1`), set **`in_joydev`**.
+1. In the game console, run **`in_joy_info`** to print the joydev **name**, **axis count**, and **button count** for the current **`in_joydev`** path (Linux, non-dedicated).
+2. If the left stick does nothing, run `jstest /dev/input/js0` (or `evtest`) and set **`in_joy_axis*`** to match your device’s axis order.  
+3. If look is too fast or inverted, adjust **`in_joyLookScale`** or swap **`in_joy_axisLookPitch`** with another axis index.  
+4. If you use a different node (e.g. `js1`), set **`in_joydev`**.
 
 ## Permissions
 
