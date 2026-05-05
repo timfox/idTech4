@@ -434,6 +434,7 @@ void R_InitOpenGL( void ) {
 	common->Printf( "----- R_InitOpenGL -----\n" );
 
 	IceBridge_RefreshRHIFromCvar();
+	IceBridge_RefreshD3D12RasterFromCvar();
 
 	if ( glConfig.isInitialized ) {
 		common->FatalError( "R_InitOpenGL called while active" );
