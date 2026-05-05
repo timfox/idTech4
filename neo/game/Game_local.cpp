@@ -30,6 +30,7 @@ If you have questions concerning this license or the applicable additional terms
 #pragma hdrstop
 
 #include "Game_local.h"
+#include "experimental/GameExperimentalECS.h"
 
 #ifdef GAME_DLL
 
@@ -296,6 +297,8 @@ void idGameLocal::Init( void ) {
 
 	InitConsoleCommands();
 
+	GameExperimentalECS_Alloc();
+
 	// load default scripts
 	program.Startup( SCRIPT_DEFAULT );
 	
@@ -374,6 +377,8 @@ void idGameLocal::Shutdown( void ) {
 	collisionModelManager->FreeMap();
 
 	ShutdownConsoleCommands();
+
+	GameExperimentalECS_Free();
 
 	// free memory allocated by class objects
 	Clear();
@@ -1149,6 +1154,10 @@ void idGameLocal::MapPopulate( void ) {
 	// before the physics are run so entities can bind correctly
 	Printf( "==== Processing events ====\n" );
 	idEvent::ServiceEvents();
+
+	if ( gameExperimentalECS ) {
+		gameExperimentalECS->InitForMap();
+	}
 }
 
 /*
@@ -1419,6 +1428,10 @@ idGameLocal::MapClear
 */
 void idGameLocal::MapClear( bool clearClients ) {
 	int i;
+
+	if ( gameExperimentalECS ) {
+		gameExperimentalECS->ShutdownForMap();
+	}
 
 	for( i = ( clearClients ? 0 : MAX_CLIENTS ); i < MAX_GENTITIES; i++ ) {
 		delete entities[ i ];
@@ -2298,6 +2311,10 @@ gameReturn_t idGameLocal::RunFrame( const usercmd_t *clientCmds ) {
 
 		// free the player pvs
 		FreePlayerPVS();
+
+		if ( gameExperimentalECS ) {
+			gameExperimentalECS->Frame( framenum, time );
+		}
 
 		// do multiplayer related stuff
 		if ( isMultiplayer ) {

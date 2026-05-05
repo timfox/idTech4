@@ -86,6 +86,7 @@ Lighting, denoising, path tracing quality, performance, and compatibility are st
 ## Technology
 
 - Doom 3 / idTech 4
+- **Experimental ECS / EDA (EnTT)** — optional **map-scoped** EnTT registry parallel to **`idEntity`** / **`idEvent`**; off by default (`g_ecsExperimental 0`). See [docs/ECS_EDA_EXPERIMENTAL.md](docs/ECS_EDA_EXPERIMENTAL.md) and `neo/game/experimental/`.
 - **SVG textures** — materials can reference **`.svg`** files; they are rasterized at load time (NanoSVG) to RGBA like other images. Tune with **`r_svgScale`** and **`r_svgMaxDimension`** (see `neo/renderer/R_SvgLoad.cpp`).
 - **Extra audio codecs** — alongside **`.wav`** / **`.ogg`**, the sound cache will pick up a same-base-name **`.flac`** or **`.mp3`** if present (decoded with [dr_libs](https://github.com/mackron/dr_libs) in `neo/sound/`). Non-44.1/22.05/11.025 kHz sources are resampled to **44.1 kHz** for compatibility with existing sample validation.
 - IceBridge renderer layer
