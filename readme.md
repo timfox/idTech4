@@ -66,6 +66,16 @@ Lighting, denoising, path tracing quality, performance, and compatibility are st
 - Global illumination
 - Modern GPU rendering pipeline
 
+### Vulkan + ray tracing (in progress)
+
+RT/GI today is **D3D12 + DXR** in the IceBridge layer. A **Vulkan** path with **VK_KHR_ray_tracing_pipeline** (or **VK_KHR_ray_query**) requires porting the **`glRaytracing*`** acceleration-structure and dispatch stack—see [docs/VULKAN_RAYTRACING.md](docs/VULKAN_RAYTRACING.md).
+
+On **Linux**, verify your driver exposes RT extensions with the standalone probe:
+
+```bash
+make -C tools/vulkanrt_caps && ./tools/vulkanrt_caps/vulkanrt_caps
+```
+
 ## About IceBridge
 
 IceBridge is designed to bring modern rendering capabilities to legacy engines without requiring the entire game renderer to be rewritten from scratch.
