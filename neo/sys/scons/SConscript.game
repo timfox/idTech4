@@ -52,6 +52,7 @@ game_string = ' \
 	gamesys/Event.cpp \
 	gamesys/SaveGame.cpp \
 	gamesys/SysCmds.cpp \
+	gamesys/GameStudioCmds.cpp \
 	gamesys/SysCvar.cpp \
 	gamesys/TypeInfo.cpp \
 	anim/Anim.cpp \

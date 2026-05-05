@@ -540,6 +540,7 @@ private:
 	void					InitScriptForMap( void );
 
 	void					InitConsoleCommands( void );
+	void					RegisterStudioCommands( void );
 	void					ShutdownConsoleCommands( void );
 
 	void					InitAsyncNetwork( void );

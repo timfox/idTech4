@@ -280,6 +280,7 @@
     <ClCompile Include="game\gamesys\Event.cpp" />
     <ClCompile Include="game\gamesys\SaveGame.cpp" />
     <ClCompile Include="game\gamesys\SysCmds.cpp" />
+    <ClCompile Include="game\gamesys\GameStudioCmds.cpp" />
     <ClCompile Include="game\gamesys\SysCvar.cpp" />
     <ClCompile Include="game\physics\Clip.cpp" />
     <ClCompile Include="game\physics\Force.cpp" />
