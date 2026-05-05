@@ -86,6 +86,7 @@ Lighting, denoising, path tracing quality, performance, and compatibility are st
 ## Technology
 
 - Doom 3 / idTech 4
+- **Raster image formats (stb_image)** — alongside **`.tga`** / **`.jpg`** / **`.bmp`** / **`.pcx`**, the loader accepts **`.png`**, **`.psd`**, **`.gif`**, **`.hdr`**, **`.pic`**, and **`.ppm` / `.pgm` / `.pnm`** via [stb_image](https://github.com/nothings/stb) (`neo/renderer/stb_image_impl.cpp`, `neo/renderer/third_party/stb_image.h`). If a **`.tga`** is missing, the same basename is tried for **`.jpg`** then those stb formats (see `R_LoadImage` in `neo/renderer/Image_files.cpp`).
 - **SVG textures** — materials can reference **`.svg`** files; they are rasterized at load time (NanoSVG) to RGBA like other images. Tune with **`r_svgScale`** and **`r_svgMaxDimension`** (see `neo/renderer/R_SvgLoad.cpp`).
 - **Extra audio codecs** — alongside **`.wav`** / **`.ogg`**, the sound cache will pick up a same-base-name **`.flac`** or **`.mp3`** if present (decoded with [dr_libs](https://github.com/mackron/dr_libs) in `neo/sound/`). Non-44.1/22.05/11.025 kHz sources are resampled to **44.1 kHz** for compatibility with existing sample validation.
 - IceBridge renderer layer
