@@ -380,6 +380,14 @@ idAI::idAI() {
 	eyeFocusRate		= 0.0f;
 	headFocusRate		= 0.0f;
 	focusAlignTime		= 0;
+
+	goapEnabled			= false;
+	goapGoalMask		= 0;
+	goapReplanInterval	= 500;
+	goapPlanStep		= 0;
+	goapPlan.Clear();
+	goapLastPlanTime	= -999999;
+	goapWaitingMove		= false;
 }
 
 /*
@@ -694,6 +702,8 @@ void idAI::Restore( idRestoreGame *savefile ) {
 	if ( restorePhysics ) {
 		RestorePhysics( &physicsObj );
 	}
+
+	GoapInitFromSpawn();
 }
 
 /*
@@ -925,6 +935,8 @@ void idAI::Spawn( void ) {
 		af.SetupPose( this, gameLocal.time );
 		af.GetPhysics()->EnableClip();
 	}
+
+	GoapInitFromSpawn();
 
 	// init the move variables
 	StopMove( MOVE_STATUS_DONE );
@@ -1197,6 +1209,10 @@ void idAI::UpdateAIScript( void ) {
 	if ( allowHiddenMovement || !IsHidden() ) {
 		// update the animstate if we're not hidden
 		UpdateAnimState();
+	}
+
+	if ( goapEnabled && g_goap.GetBool() ) {
+		GoapExecute();
 	}
 }
 

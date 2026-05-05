@@ -96,6 +96,10 @@ extern idCVar	ai_showPaths;
 extern idCVar	ai_showObstacleAvoidance;
 extern idCVar	ai_blockedFailSafe;
 
+extern idCVar	g_goap;
+extern idCVar	g_goapDebug;
+extern idCVar	g_goapMaxNodes;
+
 extern idCVar	g_dvTime;
 extern idCVar	g_dvAmplitude;
 extern idCVar	g_dvFrequency;

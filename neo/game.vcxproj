@@ -268,6 +268,7 @@
     <ClCompile Include="game\ai\AAS_pathing.cpp" />
     <ClCompile Include="game\ai\AAS_routing.cpp" />
     <ClCompile Include="game\ai\AI.cpp" />
+    <ClCompile Include="game\ai\AI_GOAP.cpp" />
     <ClCompile Include="game\ai\AI_events.cpp" />
     <ClCompile Include="game\ai\AI_pathing.cpp" />
     <ClCompile Include="game\ai\AI_Vagary.cpp" />
