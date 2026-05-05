@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- Optional FFmpeg (LibAV): set FFmpegRoot to a prefix that contains include/ and lib/ (e.g. vcpkg installed\x64-windows). -->
+  <PropertyGroup>
+    <FFmpegRoot Condition="'$(FFmpegRoot)'==''"></FFmpegRoot>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(FFmpegRoot)'!='' and Exists('$(FFmpegRoot)\include\libavformat\avformat.h')">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(FFmpegRoot)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>ID_HAVE_FFMPEG=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(FFmpegRoot)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>avformat.lib;avcodec.lib;avutil.lib;swscale.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+</Project>
