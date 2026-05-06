@@ -1575,11 +1575,11 @@ void idPlayer::Spawn( void ) {
 			}
 		} else {
 			g_damageScale.SetFloat( 1.0f );
-			g_armorProtection.SetFloat( ( g_skill.GetInteger() < 2 ) ? 0.4f : 0.2f );
+			g_armorProtection.SetFloat( ( g_skill.GetInteger() < 2 ) ? g_optimArmorEasy.GetFloat() : g_optimArmorHard.GetFloat() );
 #ifndef ID_DEMO_BUILD
 			if ( g_skill.GetInteger() == 3 ) {
 				healthTake = true;
-				nextHealthTake = gameLocal.time + g_healthTakeTime.GetInteger() * 1000;
+				nextHealthTake = gameLocal.time + g_optimNightmareTakePeriodSec.GetInteger() * 1000;
 			}
 #endif
 		}
@@ -3165,11 +3165,11 @@ void idPlayer::UpdatePowerUps( void ) {
 #ifndef ID_DEMO_BUILD
 	if ( !gameLocal.inCinematic && influenceActive == 0 && g_skill.GetInteger() == 3 && gameLocal.time > nextHealthTake && !AI_DEAD && health > g_healthTakeLimit.GetInteger() ) {
 		assert( !gameLocal.isClient );	// healthPool never be set on client
-		health -= g_healthTakeAmt.GetInteger();
+		health -= g_optimNightmareTakeAmt.GetInteger();
 		if ( health < g_healthTakeLimit.GetInteger() ) {
 			health = g_healthTakeLimit.GetInteger();
 		}
-		nextHealthTake = gameLocal.time + g_healthTakeTime.GetInteger() * 1000;
+		nextHealthTake = gameLocal.time + g_optimNightmareTakePeriodSec.GetInteger() * 1000;
 		healthTake = true;
 	}
 #endif
@@ -6284,9 +6284,9 @@ void idPlayer::Think( void ) {
 		if ( !gameLocal.isMultiplayer ) {
 			SetCurrentHeartRate();
 			float scale = g_damageScale.GetFloat();
-			if ( g_useDynamicProtection.GetBool() && scale < 1.0f && gameLocal.time - lastDmgTime > 500 ) {
+			if ( g_useDynamicProtection.GetBool() && scale < 1.0f && gameLocal.time - lastDmgTime > g_optimRecInterval.GetInteger() ) {
 				if ( scale < 1.0f ) {
-					scale += 0.05f;
+					scale += g_optimRecStep.GetFloat();
 				}
 				if ( scale > 1.0f ) {
 					scale = 1.0f;
@@ -6808,8 +6808,8 @@ void idPlayer::Damage( idEntity *inflictor, idEntity *attacker, const idVec3 &di
 		if ( !gameLocal.isMultiplayer ) {
 			float scale = g_damageScale.GetFloat();
 			if ( g_useDynamicProtection.GetBool() && g_skill.GetInteger() < 2 ) {
-				if ( gameLocal.time > lastDmgTime + 500 && scale > 0.25f ) {
-					scale -= 0.05f;
+				if ( gameLocal.time > lastDmgTime + g_optimDmgInterval.GetInteger() && scale > 0.25f ) {
+					scale -= g_optimDmgStep.GetFloat();
 					g_damageScale.SetFloat( scale );
 				}
 			}

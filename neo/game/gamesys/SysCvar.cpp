@@ -119,12 +119,20 @@ idCVar g_debugTriggers(				"g_debugTriggers",			"0",			CVAR_GAME | CVAR_BOOL, ""
 idCVar g_debugCinematic(			"g_debugCinematic",			"0",			CVAR_GAME | CVAR_BOOL, "" );
 idCVar g_stopTime(					"g_stopTime",				"0",			CVAR_GAME | CVAR_BOOL, "" );
 idCVar g_damageScale(				"g_damageScale",			"1",			CVAR_GAME | CVAR_FLOAT | CVAR_ARCHIVE, "scale final damage on player by this factor" );
+idCVar g_optimDmgStep(				"g_optimDmgStep",			"0.05",			CVAR_GAME | CVAR_FLOAT | CVAR_ARCHIVE, "dynamic protection: damage scale decay per tick (from MathProg tune or default)" );
+idCVar g_optimRecStep(				"g_optimRecStep",			"0.05",			CVAR_GAME | CVAR_FLOAT | CVAR_ARCHIVE, "dynamic protection: damage scale recovery per tick when idle" );
+idCVar g_optimDmgInterval(			"g_optimDmgInterval",		"500",			CVAR_GAME | CVAR_INTEGER | CVAR_ARCHIVE, "dynamic protection: min ms between decay ticks", 50, 5000 );
+idCVar g_optimRecInterval(			"g_optimRecInterval",		"500",			CVAR_GAME | CVAR_INTEGER | CVAR_ARCHIVE, "dynamic protection: min ms between recovery ticks", 50, 5000 );
+idCVar g_optimArmorEasy(			"g_optimArmorEasy",			"0.4",			CVAR_GAME | CVAR_FLOAT | CVAR_ARCHIVE, "SP skill 0-1: armor absorption fraction (MathProg-tunable)" );
+idCVar g_optimArmorHard(			"g_optimArmorHard",			"0.2",			CVAR_GAME | CVAR_FLOAT | CVAR_ARCHIVE, "SP skill 2+: armor absorption fraction (MathProg-tunable)" );
 idCVar g_armorProtection(			"g_armorProtection",		"0.3",			CVAR_GAME | CVAR_FLOAT | CVAR_ARCHIVE, "armor takes this percentage of damage" );
 idCVar g_armorProtectionMP(			"g_armorProtectionMP",		"0.6",			CVAR_GAME | CVAR_FLOAT | CVAR_ARCHIVE, "armor takes this percentage of damage in mp" );
 idCVar g_useDynamicProtection(		"g_useDynamicProtection",	"1",			CVAR_GAME | CVAR_BOOL | CVAR_ARCHIVE, "scale damage and armor dynamically to keep the player alive more often" );
 idCVar g_healthTakeTime(			"g_healthTakeTime",			"5",			CVAR_GAME | CVAR_INTEGER | CVAR_ARCHIVE, "how often to take health in nightmare mode" );
 idCVar g_healthTakeAmt(				"g_healthTakeAmt",			"5",			CVAR_GAME | CVAR_INTEGER | CVAR_ARCHIVE, "how much health to take in nightmare mode" );
 idCVar g_healthTakeLimit(			"g_healthTakeLimit",		"25",			CVAR_GAME | CVAR_INTEGER | CVAR_ARCHIVE, "how low can health get taken in nightmare mode" );
+idCVar g_optimNightmareTakeAmt(		"g_optimNightmareTakeAmt",	"5",			CVAR_GAME | CVAR_INTEGER | CVAR_ARCHIVE, "nightmare passive drain: health lost per tick (MathProg-tunable)", 1, 50 );
+idCVar g_optimNightmareTakePeriodSec( "g_optimNightmareTakePeriodSec", "5",	CVAR_GAME | CVAR_INTEGER | CVAR_ARCHIVE, "nightmare passive drain: seconds between ticks (MathProg-tunable)", 1, 120 );
 
 
 

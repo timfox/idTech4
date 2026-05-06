@@ -44,6 +44,12 @@ jobs:
           ./tools/vulkanrt_caps/vulkanrt_caps
           make -C tools/aiml3 clean all CXX="${{ matrix.cxx }}"
           printf 'HELLO\nquit\n' | ./tools/aiml3/aiml3 --load tools/aiml3/test/hello.json
+          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq glpk-utils
+            make -C tools/ampl_mathprog gen
+            test -f base/optim/resource_tuned.cfg
+          fi
 
       - name: Build and run (Windows MSVC)
         if: runner.os == 'Windows'

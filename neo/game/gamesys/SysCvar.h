@@ -62,10 +62,18 @@ extern idCVar	g_stopTime;
 extern idCVar	g_armorProtection;
 extern idCVar	g_armorProtectionMP;
 extern idCVar	g_damageScale;
+extern idCVar	g_optimDmgStep;
+extern idCVar	g_optimRecStep;
+extern idCVar	g_optimDmgInterval;
+extern idCVar	g_optimRecInterval;
+extern idCVar	g_optimArmorEasy;
+extern idCVar	g_optimArmorHard;
 extern idCVar	g_useDynamicProtection;
 extern idCVar	g_healthTakeTime;
 extern idCVar	g_healthTakeAmt;
 extern idCVar	g_healthTakeLimit;
+extern idCVar	g_optimNightmareTakeAmt;
+extern idCVar	g_optimNightmareTakePeriodSec;
 
 extern idCVar	g_showPVS;
 extern idCVar	g_showTargets;
