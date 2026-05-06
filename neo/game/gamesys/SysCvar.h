@@ -66,6 +66,8 @@ extern idCVar	g_optimDmgStep;
 extern idCVar	g_optimRecStep;
 extern idCVar	g_optimDmgInterval;
 extern idCVar	g_optimRecInterval;
+extern idCVar	g_optimArmorEasy;
+extern idCVar	g_optimArmorHard;
 extern idCVar	g_useDynamicProtection;
 extern idCVar	g_healthTakeTime;
 extern idCVar	g_healthTakeAmt;

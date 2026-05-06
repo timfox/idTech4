@@ -123,6 +123,8 @@ idCVar g_optimDmgStep(				"g_optimDmgStep",			"0.05",			CVAR_GAME | CVAR_FLOAT |
 idCVar g_optimRecStep(				"g_optimRecStep",			"0.05",			CVAR_GAME | CVAR_FLOAT | CVAR_ARCHIVE, "dynamic protection: damage scale recovery per tick when idle" );
 idCVar g_optimDmgInterval(			"g_optimDmgInterval",		"500",			CVAR_GAME | CVAR_INTEGER | CVAR_ARCHIVE, "dynamic protection: min ms between decay ticks", 50, 5000 );
 idCVar g_optimRecInterval(			"g_optimRecInterval",		"500",			CVAR_GAME | CVAR_INTEGER | CVAR_ARCHIVE, "dynamic protection: min ms between recovery ticks", 50, 5000 );
+idCVar g_optimArmorEasy(			"g_optimArmorEasy",			"0.4",			CVAR_GAME | CVAR_FLOAT | CVAR_ARCHIVE, "SP skill 0-1: armor absorption fraction (MathProg-tunable)" );
+idCVar g_optimArmorHard(			"g_optimArmorHard",			"0.2",			CVAR_GAME | CVAR_FLOAT | CVAR_ARCHIVE, "SP skill 2+: armor absorption fraction (MathProg-tunable)" );
 idCVar g_armorProtection(			"g_armorProtection",		"0.3",			CVAR_GAME | CVAR_FLOAT | CVAR_ARCHIVE, "armor takes this percentage of damage" );
 idCVar g_armorProtectionMP(			"g_armorProtectionMP",		"0.6",			CVAR_GAME | CVAR_FLOAT | CVAR_ARCHIVE, "armor takes this percentage of damage in mp" );
 idCVar g_useDynamicProtection(		"g_useDynamicProtection",	"1",			CVAR_GAME | CVAR_BOOL | CVAR_ARCHIVE, "scale damage and armor dynamically to keep the player alive more often" );

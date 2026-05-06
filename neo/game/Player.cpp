@@ -1575,7 +1575,7 @@ void idPlayer::Spawn( void ) {
 			}
 		} else {
 			g_damageScale.SetFloat( 1.0f );
-			g_armorProtection.SetFloat( ( g_skill.GetInteger() < 2 ) ? 0.4f : 0.2f );
+			g_armorProtection.SetFloat( ( g_skill.GetInteger() < 2 ) ? g_optimArmorEasy.GetFloat() : g_optimArmorHard.GetFloat() );
 #ifndef ID_DEMO_BUILD
 			if ( g_skill.GetInteger() == 3 ) {
 				healthTake = true;
