@@ -296,6 +296,12 @@ void idGameLocal::Init( void ) {
 
 	InitConsoleCommands();
 
+	// Optional MathProg/GLPK-tuned gameplay constants (see tools/ampl_mathprog/)
+	if ( fileSystem->ReadFile( "optim/resource_tuned.cfg", NULL, NULL ) > 0 ) {
+		cmdSystem->BufferCommandText( CMD_EXEC_APPEND, "exec optim/resource_tuned.cfg\n" );
+		cmdSystem->ExecuteCommandBuffer();
+	}
+
 	// load default scripts
 	program.Startup( SCRIPT_DEFAULT );
 	

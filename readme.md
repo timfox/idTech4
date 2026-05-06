@@ -27,6 +27,10 @@ To run the game you still need **legal Doom 3 game data** (for example `base/pak
 
 The D3D12-backed GL path is wired through the **`opengl`** project and helpers such as [`neo/opengl/gl_d3d12wgl.cpp`](neo/opengl/gl_d3d12wgl.cpp); renderer initialization touches code like [`neo/renderer/RenderSystem_init.cpp`](neo/renderer/RenderSystem_init.cpp).
 
+### AMPL / MathProg → runtime tuning (like id Tech 5 / 6 pipelines)
+
+**GNU MathProg** models under [`tools/ampl_mathprog/`](tools/ampl_mathprog/) are solved offline with **`glpsol`**; the generator writes [`base/optim/resource_tuned.cfg`](base/optim/resource_tuned.cfg) with `set g_optimDmgStep` / `set g_optimRecStep`. **`Game`** auto-`exec`s that cfg when present so **dynamic player protection** (`g_useDynamicProtection`, `g_damageScale`) uses optimized step sizes instead of hard-coded `0.05` / `500 ms`. See [tools/ampl_mathprog/README.md](tools/ampl_mathprog/README.md).
+
 ## Linux / Steam Deck and Vulkan (raster)
 
 **Steam Deck** does not offer practical **hardware ray tracing** for this engine’s DXR-style path. Portable work should prioritize **Vulkan raster** (swapchain, passes, post), **asset and pak loading**, and **media** (see [docs/VULKAN_PLATFORM_STEAMDECK.md](docs/VULKAN_PLATFORM_STEAMDECK.md)).
