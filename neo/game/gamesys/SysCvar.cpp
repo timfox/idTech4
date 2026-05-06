@@ -131,6 +131,8 @@ idCVar g_useDynamicProtection(		"g_useDynamicProtection",	"1",			CVAR_GAME | CVA
 idCVar g_healthTakeTime(			"g_healthTakeTime",			"5",			CVAR_GAME | CVAR_INTEGER | CVAR_ARCHIVE, "how often to take health in nightmare mode" );
 idCVar g_healthTakeAmt(				"g_healthTakeAmt",			"5",			CVAR_GAME | CVAR_INTEGER | CVAR_ARCHIVE, "how much health to take in nightmare mode" );
 idCVar g_healthTakeLimit(			"g_healthTakeLimit",		"25",			CVAR_GAME | CVAR_INTEGER | CVAR_ARCHIVE, "how low can health get taken in nightmare mode" );
+idCVar g_optimNightmareTakeAmt(		"g_optimNightmareTakeAmt",	"5",			CVAR_GAME | CVAR_INTEGER | CVAR_ARCHIVE, "nightmare passive drain: health lost per tick (MathProg-tunable)", 1, 50 );
+idCVar g_optimNightmareTakePeriodSec( "g_optimNightmareTakePeriodSec", "5",	CVAR_GAME | CVAR_INTEGER | CVAR_ARCHIVE, "nightmare passive drain: seconds between ticks (MathProg-tunable)", 1, 120 );
 
 
 

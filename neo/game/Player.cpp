@@ -1579,7 +1579,7 @@ void idPlayer::Spawn( void ) {
 #ifndef ID_DEMO_BUILD
 			if ( g_skill.GetInteger() == 3 ) {
 				healthTake = true;
-				nextHealthTake = gameLocal.time + g_healthTakeTime.GetInteger() * 1000;
+				nextHealthTake = gameLocal.time + g_optimNightmareTakePeriodSec.GetInteger() * 1000;
 			}
 #endif
 		}
@@ -3165,11 +3165,11 @@ void idPlayer::UpdatePowerUps( void ) {
 #ifndef ID_DEMO_BUILD
 	if ( !gameLocal.inCinematic && influenceActive == 0 && g_skill.GetInteger() == 3 && gameLocal.time > nextHealthTake && !AI_DEAD && health > g_healthTakeLimit.GetInteger() ) {
 		assert( !gameLocal.isClient );	// healthPool never be set on client
-		health -= g_healthTakeAmt.GetInteger();
+		health -= g_optimNightmareTakeAmt.GetInteger();
 		if ( health < g_healthTakeLimit.GetInteger() ) {
 			health = g_healthTakeLimit.GetInteger();
 		}
-		nextHealthTake = gameLocal.time + g_healthTakeTime.GetInteger() * 1000;
+		nextHealthTake = gameLocal.time + g_optimNightmareTakePeriodSec.GetInteger() * 1000;
 		healthTake = true;
 	}
 #endif

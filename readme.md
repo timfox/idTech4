@@ -29,7 +29,7 @@ The D3D12-backed GL path is wired through the **`opengl`** project and helpers s
 
 ### AMPL / MathProg → runtime tuning (like id Tech 5 / 6 pipelines)
 
-**GNU MathProg** models under [`tools/ampl_mathprog/`](tools/ampl_mathprog/) are solved offline with **`glpsol`**; the generator merges **`base/optim/resource_tuned.cfg`** with `g_optimDmgStep`, `g_optimRecStep`, **`g_optimArmorEasy`**, **`g_optimArmorHard`**. **`Game`** auto-`exec`s that cfg when present so **dynamic player protection** and **SP armor absorption on respawn** use optimized values instead of hard-coded constants. See [tools/ampl_mathprog/README.md](tools/ampl_mathprog/README.md).
+**GNU MathProg** models under [`tools/ampl_mathprog/`](tools/ampl_mathprog/) are solved offline with **`glpsol`**; the generator merges **`base/optim/resource_tuned.cfg`** with `g_optimDmgStep`, `g_optimRecStep`, **`g_optimArmorEasy`**, **`g_optimArmorHard`**, and **nightmare drain** tunables (`g_optimNightmareTakeAmt`, `g_optimNightmareTakePeriodSec`). **`Game`** auto-`exec`s that cfg when present. See [tools/ampl_mathprog/README.md](tools/ampl_mathprog/README.md).
 
 ## Linux / Steam Deck and Vulkan (raster)
 
